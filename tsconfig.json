@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "lib": [],
+    "types": ["./runtime.d.ts"]
+  }
+}

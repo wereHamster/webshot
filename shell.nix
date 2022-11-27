@@ -4,5 +4,6 @@ let
 in pkgs.mkShell {
   buildInputs = [
     pkgs.deno
+    pkgs.google-cloud-sdk
   ];
 }

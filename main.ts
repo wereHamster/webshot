@@ -26,7 +26,8 @@ async function handleConnection(connection: Deno.Conn) {
     await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 2 });
     await page.goto(`https://${url}`, { waitUntil: "networkidle0" });
     const image = (await page.screenshot({
-      type: "png",
+      type: "jpeg",
+      quality: 90,
       fullPage: true,
     })) as Uint8Array;
 
@@ -36,7 +37,7 @@ async function handleConnection(connection: Deno.Conn) {
       new Response(image, {
         status: 200,
         headers: {
-          "Content-Type": "image/png",
+          "Content-Type": "image/jpeg",
         },
       })
     );

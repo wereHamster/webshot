@@ -74,7 +74,7 @@ WORKDIR /usr/src/app
 COPY main.ts ./
 RUN deno cache --unstable main.ts
 
-RUN PUPPETEER_PRODUCT=chrome deno run -A --unstable https://deno.land/x/puppeteer@9.0.1/install.ts
+RUN PUPPETEER_PRODUCT=chrome deno run -A --unstable https://deno.land/x/puppeteer@16.2.0/install.ts
 
 EXPOSE 3000
 CMD [ "deno", "run", "-A", "--unstable", "main.ts" ]

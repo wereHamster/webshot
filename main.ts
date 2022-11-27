@@ -1,4 +1,4 @@
-import puppeteer from "https://deno.land/x/puppeteer@9.0.1/mod.ts";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 const port = parseInt(Deno.env.get("PORT") ?? "3000", 10);
 const server = Deno.listen({ port });

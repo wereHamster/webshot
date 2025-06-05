@@ -1,45 +1,34 @@
-import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import { chromium, devices } from "npm:playwright@1.49.1";
 
 const port = parseInt(Deno.env.get("PORT") ?? "3000", 10);
-const server = Deno.listen({ port });
-console.log(`http://localhost:${port}/`);
 
-for await (const connection of server) {
-  handleConnection(connection);
-}
+Deno.serve({ port }, async (req) => {
+  const [_, url] = new URL(req.url).pathname.match(
+    "/og/(.*)$",
+  )!;
 
-async function handleConnection(connection: Deno.Conn) {
-  const httpConnection = Deno.serveHttp(connection);
+  const browser = await chromium.launch({
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+  const context = await browser.newContext(devices["Desktop Chrome HiDPI"]);
+  const page = await context.newPage();
+  await page.setViewportSize({
+    width: 1200,
+    height: 630,
+  });
+  await page.goto(`https://${url}`, { waitUntil: "networkidle0" });
+  const image = (await page.screenshot({
+    type: "jpeg",
+    quality: 90,
+    fullPage: true,
+  })) as Uint8Array;
 
-  for await (const requestEvent of httpConnection) {
-    const [_, url] = new URL(requestEvent.request.url).pathname.match(
-      "/og/(.*)$"
-    )!;
+  await browser.close();
 
-    const browser = await puppeteer.launch({
-      args: [
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1200, height: 630, deviceScaleFactor: 2 });
-    await page.goto(`https://${url}`, { waitUntil: "networkidle0" });
-    const image = (await page.screenshot({
-      type: "jpeg",
-      quality: 90,
-      fullPage: true,
-    })) as Uint8Array;
-
-    await browser.close();
-
-    requestEvent.respondWith(
-      new Response(image, {
-        status: 200,
-        headers: {
-          "Content-Type": "image/jpeg",
-        },
-      })
-    );
-  }
-}
+  return new Response(image, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/jpeg",
+    },
+  });
+});

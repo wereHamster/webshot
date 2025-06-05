@@ -1,4 +1,4 @@
-FROM denoland/deno:1.28.2
+FROM denoland/deno:2.3.5
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -71,10 +71,9 @@ RUN apt-get -qq update \
 USER deno
 WORKDIR /usr/src/app
 
-COPY main.ts ./
-RUN deno cache --unstable main.ts
-
-RUN PUPPETEER_PRODUCT=chrome deno run -A --unstable https://deno.land/x/puppeteer@16.2.0/install.ts
+COPY deno.* main.ts ./
+RUN deno cache -A main.ts
+RUN deno run -A "npm:playwright@1.52.0" install chromium-headless-shell
 
 EXPOSE 3000
-CMD [ "deno", "run", "-A", "--unstable", "main.ts" ]
+CMD [ "deno", "run", "-A", "main.ts" ]

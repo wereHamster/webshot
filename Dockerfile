@@ -68,11 +68,10 @@ RUN apt-get -qq update \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 
-USER deno
 WORKDIR /usr/src/app
 
 COPY deno.* main.ts ./
-RUN deno cache -A main.ts
+RUN deno cache main.ts
 RUN deno run -A "npm:playwright@1.52.0" install chromium-headless-shell
 
 EXPOSE 3000

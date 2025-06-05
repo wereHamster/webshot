@@ -16,7 +16,7 @@ Deno.serve({ port }, async (req) => {
     width: 1200,
     height: 630,
   });
-  await page.goto(`https://${url}`, { waitUntil: "networkidle0" });
+  await page.goto(`https://${url}`, { waitUntil: "networkidle" });
   const image = (await page.screenshot({
     type: "jpeg",
     quality: 90,

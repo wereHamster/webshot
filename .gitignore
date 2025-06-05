@@ -1,2 +1,2 @@
 .direnv/
-runtime.d.ts
+node_modules/

@@ -1,4 +1,4 @@
-import { chromium, devices } from "npm:playwright@1.49.1";
+import { chromium, devices } from "npm:playwright@1.52.0";
 
 const port = parseInt(Deno.env.get("PORT") ?? "3000", 10);
 

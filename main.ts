@@ -7,28 +7,25 @@ const browserPromise = chromium.launch({
 });
 
 Deno.serve({ port }, async (req) => {
-  const [_, url0] = new URL(req.url).pathname.match("/og/(.*)$")!;
+  const match = new URL(req.url).pathname.match("/og/(.*)$");
+  if (!match) {
+    return new Response("Not Found", { status: 404 });
+  }
+
+  const [_, url0] = match;
+  if (!url0) {
+    return new Response("Bad Request", { status: 400 });
+  }
 
   const url = url0 + "?" + new URL(req.url).searchParams.toString();
 
-  const browser = await browserPromise;
-
-  const context = await browser.newContext(devices["Desktop Chrome"]);
-  const page = await context.newPage();
-  await page.setViewportSize({
-    width: 1200,
-    height: 630,
+  const image = await doCapture({
+    device: {
+      viewport: { width: 1200, height: 630 },
+    },
+    input: { kind: "url", value: "https://" + url },
+    target: { kind: "page" },
   });
-
-  await page.goto(`https://${url}`, { waitUntil: "networkidle" });
-
-  const image = await page.screenshot({
-    type: "jpeg",
-    quality: 90,
-    fullPage: true,
-  });
-
-  await context.close();
 
   return new Response(image, {
     status: 200,
@@ -37,3 +34,58 @@ Deno.serve({ port }, async (req) => {
     },
   });
 });
+
+interface CaptureRequest {
+  device: {
+    viewport: {
+      width: number;
+      height: number;
+    };
+  };
+
+  input: { kind: "url"; value: string } | { kind: "contents"; value: string };
+
+  target:
+    | { kind: "viewport" }
+    | { kind: "page" }
+    | { kind: "element"; locator: string };
+}
+
+async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
+  const browser = await browserPromise;
+
+  const context = await browser.newContext({
+    viewport: request.device.viewport,
+  });
+  const page = await context.newPage();
+
+  if (request.input.kind === "url") {
+    await page.goto(request.input.value, { waitUntil: "networkidle" });
+  } else {
+    await page.setContent(request.input.value, { waitUntil: "networkidle" });
+  }
+
+  const image = await (() => {
+    if (request.target.kind === "viewport") {
+      return page.screenshot({
+        type: "jpeg",
+        quality: 90,
+      });
+    } else if (request.target.kind === "page") {
+      return page.screenshot({
+        type: "jpeg",
+        quality: 90,
+        fullPage: true,
+      });
+    } else {
+      return page.locator(request.target.locator).screenshot({
+        type: "jpeg",
+        quality: 90,
+      });
+    }
+  })();
+
+  await context.close();
+
+  return image;
+}

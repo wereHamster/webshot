@@ -7,6 +7,17 @@ const browserPromise = chromium.launch({
 });
 
 Deno.serve({ port }, async (req) => {
+  if (req.method === "POST" && new URL(req.url).pathname === "/webshot.WebShot/Capture") {
+    const image = await doCapture(await req.json());
+
+    return new Response(image, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/jpeg",
+      },
+    });
+  }
+
   const match = new URL(req.url).pathname.match("/og/(.*)$");
   if (!match) {
     return new Response("Not Found", { status: 404 });

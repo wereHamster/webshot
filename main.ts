@@ -55,6 +55,7 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
   const browser = await browserPromise;
 
   const context = await browser.newContext({
+    ...devices["Desktop Chrome"],
     viewport: request.device.viewport,
   });
   const page = await context.newPage();

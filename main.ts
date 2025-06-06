@@ -1,5 +1,14 @@
 import { chromium, devices } from "npm:playwright@1.52.0";
 
+import {
+  // biscuit,
+  authorizer,
+  KeyPair,
+  PrivateKey,
+  Biscuit,
+  AuthorizerBuilder,
+} from "@biscuit-auth/biscuit-wasm";
+
 const port = parseInt(Deno.env.get("PORT") ?? "3000", 10);
 
 const browserPromise = chromium.launch({
@@ -7,7 +16,35 @@ const browserPromise = chromium.launch({
 });
 
 Deno.serve({ port }, async (req) => {
-  if (req.method === "POST" && new URL(req.url).pathname === "/webshot.WebShot/Capture") {
+  if (
+    req.method === "POST" &&
+    new URL(req.url).pathname === "/webshot.WebShot/Capture"
+  ) {
+    const privateKey = PrivateKey.fromString(
+      Deno.env.get("BISCUIT_PRIVATE_KEY"),
+    );
+    const keyPair = KeyPair.fromPrivateKey(privateKey);
+
+    // const builder = biscuit`
+    //   operation("Capture")
+    // `;
+    // console.log(builder.build(privateKey).toBase64());
+
+    const auth = authorizer`
+      allow if operation("Capture");
+    `;
+
+    const token = Biscuit.fromBase64(
+      req.headers.get("Authorization").slice(7),
+      keyPair.getPublicKey(),
+    );
+
+    const authorizerBuilder = new AuthorizerBuilder();
+    authorizerBuilder.merge(auth as any);
+
+    const authz = authorizerBuilder.buildAuthenticated(token);
+    authz.authorize();
+
     const image = await doCapture(await req.json());
 
     return new Response(image, {

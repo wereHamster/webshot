@@ -1,9 +1,13 @@
 {
   "version": "5",
   "specifiers": {
+    "npm:@biscuit-auth/biscuit-wasm@~0.6.0-beta.1": "0.6.0-beta.1",
     "npm:playwright@1.52.0": "1.52.0"
   },
   "npm": {
+    "@biscuit-auth/biscuit-wasm@0.6.0-beta.1": {
+      "integrity": "sha512-5t9ouUDuAN6xhUZGuuyq1pCMi4p4TRPj/axXJZt+JSW63qGLIRlvXxaawGB91ikGvuPZ4j13qHMz8+FZctzFMQ=="
+    },
     "fsevents@2.3.2": {
       "integrity": "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==",
       "os": ["darwin"],
@@ -23,5 +27,10 @@
       ],
       "bin": true
     }
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:@biscuit-auth/biscuit-wasm@~0.6.0-beta.1"
+    ]
   }
 }

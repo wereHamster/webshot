@@ -7,7 +7,9 @@ const browserPromise = chromium.launch({
 });
 
 Deno.serve({ port }, async (req) => {
-  const [_, url] = new URL(req.url).pathname.match("/og/(.*)$")!;
+  const [_, url0] = new URL(req.url).pathname.match("/og/(.*)$")!;
+
+  const url = url0 + "?" + new URL(req.url).searchParams.toString();
 
   const browser = await browserPromise;
 

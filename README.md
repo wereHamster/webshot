@@ -18,21 +18,24 @@ Some example use cases are:
 
 ## API
 
-### `/v1/render`
+### Authentication
+
+Via Bearer tokens.
+
+
+### Endpoints
+
+#### `/v1/render`
 
 Render static HTML into image.
 
 You supply the HTML, set the browser viewport size, and get an image back.
 
-### `/v1/capture`
+#### `/v1/capture`
 
 Capure an image of a URL.
 
 You give and URL, along with the browser viewport size, and what area should be captured. You get an image back.
-
-## Authentication
-
-Via Bearer tokens.
 
 ## Performance
 

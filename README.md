@@ -18,10 +18,11 @@ Some example use cases are:
 
 ## API
 
-### Authentication
+### Authorization
 
-Via Bearer tokens.
+Authorization is done via Bearer tokens.
 
+TODO: explain how to mint these tokens.
 
 ### Endpoints
 
@@ -41,3 +42,9 @@ You give and URL, along with the browser viewport size, and what area should be 
 
 Expect a latency of around one to three seconds to render or capture a simple, static HTML page.
 If the page needs to load external resources (images, fonts, data via XHR etc.), the latency will increase accordingly.
+
+## Security
+
+The service is not designed to be directly accessible by end-users.
+Even though the API exposes only a limited set of capabilities, they could still be used by malicious users to exfiltrate information via the created screenshots.
+You should only give API access to users who you fully trust.

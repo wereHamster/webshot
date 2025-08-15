@@ -26,8 +26,13 @@ Deno.serve({ port }, async (req) => {
     const keyPair = KeyPair.fromPrivateKey(privateKey);
 
     const auth = authorizer`
-      allow if operation("Capture");
+      allow if operation("Render");
     `;
+
+    // const builder = biscuit`
+    //   operation("Render")
+    // `;
+    // console.log(builder.build(privateKey).toBase64());
 
     const token = Biscuit.fromBase64(
       req.headers.get("Authorization").slice(7),

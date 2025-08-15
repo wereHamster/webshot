@@ -1,4 +1,4 @@
-import { chromium, devices } from "npm:playwright@1.52.0";
+import { Browser, chromium, devices } from "npm:playwright@1.52.0";
 
 import {
   // biscuit,
@@ -9,23 +9,57 @@ import {
   AuthorizerBuilder,
 } from "@biscuit-auth/biscuit-wasm";
 
-const port = parseInt(Deno.env.get("PORT") ?? "3000", 10);
+/**
+ * The port on which the HTTP server listens.
+ */
+const port: number = parseInt(Deno.env.get("PORT") ?? "3000", 10);
 
-const browserPromise = chromium.launch({
+/**
+ * Biscuit private and public keys. These are used to sign and verify
+ * authorization tokens.
+ */
+const { privateKey, publicKey } = (() => {
+  const privateKeyString = Deno.env.get("BISCUIT_PRIVATE_KEY");
+  if (!privateKeyString) {
+    throw new Error("BISCUIT_PRIVATE_KEY environment variable is not set");
+  }
+
+  const privateKey = PrivateKey.fromString(privateKeyString);
+
+  return {
+    privateKey,
+    publicKey: KeyPair.fromPrivateKey(privateKey).getPublicKey(),
+  };
+})();
+
+/*
+ * We start the browser as soon as possible, even before the HTTP server
+ * starts listening to incoming connections.
+ */
+const browserPromise: Promise<Browser> = chromium.launch({
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 
 Deno.serve({ port }, async (req) => {
-  if (
-    req.method === "POST" &&
-    (new URL(req.url).pathname === "/webshot.WebShot/Render" ||
-      new URL(req.url).pathname === "/v1/render")
-  ) {
-    const privateKey = PrivateKey.fromString(
-      Deno.env.get("BISCUIT_PRIVATE_KEY"),
-    );
-    const keyPair = KeyPair.fromPrivateKey(privateKey);
+  const url = new URL(req.url);
 
+  const authorization = req.headers.get("Authorization");
+  if (!authorization) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  /*
+   * Extract the Biscuit token from the Authorization header.
+   */
+  let token: Biscuit;
+  try {
+    token = Biscuit.fromBase64(authorization.slice(7), publicKey);
+  } catch (error: unknown) {
+    console.log("Biscuit.fromBase64", { authorization }, error);
+    return new Response("Bad Request", { status: 400 });
+  }
+
+  if (req.method === "POST" && url.pathname === "/v1/render") {
     const auth = authorizer`
       allow if operation("Render");
     `;
@@ -34,11 +68,6 @@ Deno.serve({ port }, async (req) => {
     //   operation("Render")
     // `;
     // console.log(builder.build(privateKey).toBase64());
-
-    const token = Biscuit.fromBase64(
-      req.headers.get("Authorization").slice(7),
-      keyPair.getPublicKey(),
-    );
 
     const authorizerBuilder = new AuthorizerBuilder();
     authorizerBuilder.merge(auth as any);
@@ -56,16 +85,7 @@ Deno.serve({ port }, async (req) => {
     });
   }
 
-  if (
-    req.method === "POST" &&
-    (new URL(req.url).pathname === "/webshot.WebShot/Capture" ||
-      new URL(req.url).pathname === "/v1/capture")
-  ) {
-    const privateKey = PrivateKey.fromString(
-      Deno.env.get("BISCUIT_PRIVATE_KEY"),
-    );
-    const keyPair = KeyPair.fromPrivateKey(privateKey);
-
+  if (req.method === "POST" && url.pathname === "/v1/capture") {
     // const builder = biscuit`
     //   operation("Capture")
     // `;
@@ -74,11 +94,6 @@ Deno.serve({ port }, async (req) => {
     const auth = authorizer`
       allow if operation("Capture");
     `;
-
-    const token = Biscuit.fromBase64(
-      req.headers.get("Authorization").slice(7),
-      keyPair.getPublicKey(),
-    );
 
     const authorizerBuilder = new AuthorizerBuilder();
     authorizerBuilder.merge(auth as any);
@@ -96,32 +111,7 @@ Deno.serve({ port }, async (req) => {
     });
   }
 
-  const match = new URL(req.url).pathname.match("/og/(.*)$");
-  if (!match) {
-    return new Response("Not Found", { status: 404 });
-  }
-
-  const [_, url0] = match;
-  if (!url0) {
-    return new Response("Bad Request", { status: 400 });
-  }
-
-  const url = url0 + "?" + new URL(req.url).searchParams.toString();
-
-  const image = await doCapture({
-    device: {
-      viewport: { width: 1200, height: 630 },
-    },
-    input: { kind: "url", value: "https://" + url },
-    target: { kind: "page" },
-  });
-
-  return new Response(image, {
-    status: 200,
-    headers: {
-      "Content-Type": "image/png",
-    },
-  });
+  return new Response("Not Found", { status: 404 });
 });
 
 interface RenderRequest {

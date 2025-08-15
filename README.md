@@ -3,6 +3,8 @@
   <div>turn <b>web</b>sites into screen<b>shot</b>s</div>
 </div>
 
+---
+
 WebShot is a service that converts HTML (supplied either via direct input or via URL) into images.
 
 Its API is intentionally constrained to only cover a narrow set of use cases.

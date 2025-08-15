@@ -18,7 +18,8 @@ const browserPromise = chromium.launch({
 Deno.serve({ port }, async (req) => {
   if (
     req.method === "POST" &&
-    new URL(req.url).pathname === "/webshot.WebShot/Render"
+    (new URL(req.url).pathname === "/webshot.WebShot/Render" ||
+      new URL(req.url).pathname === "/v1/render")
   ) {
     const privateKey = PrivateKey.fromString(
       Deno.env.get("BISCUIT_PRIVATE_KEY"),
@@ -57,7 +58,8 @@ Deno.serve({ port }, async (req) => {
 
   if (
     req.method === "POST" &&
-    new URL(req.url).pathname === "/webshot.WebShot/Capture"
+    (new URL(req.url).pathname === "/webshot.WebShot/Capture" ||
+      new URL(req.url).pathname === "/v1/capture")
   ) {
     const privateKey = PrivateKey.fromString(
       Deno.env.get("BISCUIT_PRIVATE_KEY"),

@@ -18,6 +18,11 @@ Some example use cases are:
 
 ## API
 
+The service was initially designed with gRPC in mind.
+However, writing gRPC servers in JavaScript (Deno runtime, specifically) is not supported well.
+Therefore the current API is based on plain HTTP.
+The API endpoints and request / response types are designed to be compatible with standard HTTP/JSON-to-gRPC transcoding semantics.
+
 ### Authorization
 
 Authorization is done via Bearer tokens.

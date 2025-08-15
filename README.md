@@ -1,7 +1,4 @@
-<p align="center">
-  <h1>WebShot</h1>
-  <div>turn <b>web</b>sites into screen<b>shot</b>s</div>
-</p>
+<p align="center"><h1>WebShot</h1><div>turn <b>web</b>sites into screen<b>shot</b>s</div></p>
 
 WebShot is a service that converts HTML (supplied either via direct input or via URL) into images.
 

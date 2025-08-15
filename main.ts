@@ -50,7 +50,7 @@ Deno.serve({ port }, async (req) => {
     return new Response(image, {
       status: 200,
       headers: {
-        "Content-Type": "image/jpeg",
+        "Content-Type": "image/png",
       },
     });
   }
@@ -78,7 +78,7 @@ Deno.serve({ port }, async (req) => {
   return new Response(image, {
     status: 200,
     headers: {
-      "Content-Type": "image/jpeg",
+      "Content-Type": "image/png",
     },
   });
 });
@@ -119,19 +119,16 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
   const image = await (() => {
     if (request.target.kind === "viewport") {
       return page.screenshot({
-        type: "jpeg",
-        quality: 90,
+        type: "png",
       });
     } else if (request.target.kind === "page") {
       return page.screenshot({
-        type: "jpeg",
-        quality: 90,
+        type: "png",
         fullPage: true,
       });
     } else {
       return page.locator(request.target.locator).screenshot({
-        type: "jpeg",
-        quality: 90,
+        type: "png",
       });
     }
   })();

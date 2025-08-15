@@ -18,6 +18,40 @@ const browserPromise = chromium.launch({
 Deno.serve({ port }, async (req) => {
   if (
     req.method === "POST" &&
+    new URL(req.url).pathname === "/webshot.WebShot/Render"
+  ) {
+    const privateKey = PrivateKey.fromString(
+      Deno.env.get("BISCUIT_PRIVATE_KEY"),
+    );
+    const keyPair = KeyPair.fromPrivateKey(privateKey);
+
+    const auth = authorizer`
+      allow if operation("Capture");
+    `;
+
+    const token = Biscuit.fromBase64(
+      req.headers.get("Authorization").slice(7),
+      keyPair.getPublicKey(),
+    );
+
+    const authorizerBuilder = new AuthorizerBuilder();
+    authorizerBuilder.merge(auth as any);
+
+    const authz = authorizerBuilder.buildAuthenticated(token);
+    authz.authorize();
+
+    const image = await doRender(await req.json());
+
+    return new Response(image, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+      },
+    });
+  }
+
+  if (
+    req.method === "POST" &&
     new URL(req.url).pathname === "/webshot.WebShot/Capture"
   ) {
     const privateKey = PrivateKey.fromString(
@@ -82,6 +116,40 @@ Deno.serve({ port }, async (req) => {
     },
   });
 });
+
+interface RenderRequest {
+  device: {
+    viewport: {
+      width: number;
+      height: number;
+    };
+    scale?: number;
+  };
+
+  input: string;
+}
+
+async function doRender(request: RenderRequest): Promise<Uint8Array> {
+  const browser = await browserPromise;
+
+  const context = await browser.newContext({
+    ...devices["Desktop Chrome"],
+    viewport: request.device.viewport,
+    deviceScaleFactor: request.device.scale ?? 1,
+  });
+
+  const page = await context.newPage();
+
+  await page.setContent(request.input, { waitUntil: "load" });
+
+  const image = await page.screenshot({
+    type: "png",
+  });
+
+  await context.close();
+
+  return image;
+}
 
 interface CaptureRequest {
   device: {

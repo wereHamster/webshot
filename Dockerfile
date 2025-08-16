@@ -10,7 +10,13 @@ RUN apt-get -qq update \
 # ↓ https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#chrome-headless-doesnt-launch-on-unix
 # Since I want to leave the contents of troubleshooting.md as it is, ca-certificates is intentionally duplicated here.
     ca-certificates \
+    # Better font packages for improved rendering
     fonts-liberation \
+    fonts-dejavu-core \
+    fonts-noto-color-emoji \
+    fonts-noto-cjk \
+    fontconfig \
+    # Original packages...
     libappindicator3-1 \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -67,6 +73,8 @@ RUN apt-get -qq update \
     && apt-get -qq clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+RUN mkdir -p /etc/fonts/conf.d
+COPY 10-webshot.conf /etc/fonts/conf.d/
 
 WORKDIR /usr/src/app
 

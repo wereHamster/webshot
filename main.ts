@@ -3,10 +3,10 @@ import { Browser, chromium, devices } from "npm:playwright@1.52.0";
 import {
   // biscuit,
   authorizer,
+  AuthorizerBuilder,
+  Biscuit,
   KeyPair,
   PrivateKey,
-  Biscuit,
-  AuthorizerBuilder,
   rule,
 } from "@biscuit-auth/biscuit-wasm";
 
@@ -38,7 +38,18 @@ const { privateKey, publicKey } = (() => {
  * starts listening to incoming connections.
  */
 const browserPromise: Promise<Browser> = chromium.launch({
-  args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  args: [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+
+    // Attempt to improve font rendering.
+    "--font-render-hinting=none",
+    "--disable-font-subpixel-positioning",
+    "--disable-gpu-sandbox",
+    "--force-color-profile=srgb",
+    "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding",
+  ],
 });
 
 // const builder = biscuit`

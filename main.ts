@@ -7,6 +7,7 @@ import {
   PrivateKey,
   Biscuit,
   AuthorizerBuilder,
+  rule,
 } from "@biscuit-auth/biscuit-wasm";
 
 /**
@@ -40,6 +41,11 @@ const browserPromise: Promise<Browser> = chromium.launch({
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 
+// const builder = biscuit`
+//   user("nobody");
+// `;
+// console.log(builder.build(privateKey).toBase64());
+
 Deno.serve({ port }, async (req) => {
   const url = new URL(req.url);
 
@@ -60,14 +66,14 @@ Deno.serve({ port }, async (req) => {
   }
 
   if (req.method === "POST" && url.pathname === "/v1/render") {
-    const auth = authorizer`
-      allow if operation("Render");
-    `;
+    const renderRequest: RenderRequest = await req.json();
 
-    // const builder = biscuit`
-    //   operation("Render")
-    // `;
-    // console.log(builder.build(privateKey).toBase64());
+    const auth = authorizer`
+      time(${new Date()});
+      operation("render");
+
+      allow if user($u);
+    `;
 
     const authorizerBuilder = new AuthorizerBuilder();
     authorizerBuilder.merge(auth as any);
@@ -75,7 +81,7 @@ Deno.serve({ port }, async (req) => {
     const authz = authorizerBuilder.buildAuthenticated(token);
     authz.authorize();
 
-    const image = await doRender(await req.json());
+    const image = await doRender(renderRequest);
 
     return new Response(image, {
       status: 200,
@@ -86,22 +92,42 @@ Deno.serve({ port }, async (req) => {
   }
 
   if (req.method === "POST" && url.pathname === "/v1/capture") {
-    // const builder = biscuit`
-    //   operation("Capture")
-    // `;
-    // console.log(builder.build(privateKey).toBase64());
+    const captureRequest: CaptureRequest = await req.json();
+
+    const url = new URL(captureRequest.input);
 
     const auth = authorizer`
-      allow if operation("Capture");
+      time(${new Date()});
+      operation("capture");
+      hostname(${url.hostname});
+
+      allow if user($u);
     `;
 
-    const authorizerBuilder = new AuthorizerBuilder();
-    authorizerBuilder.merge(auth as any);
+    // const authorizerBuilder = new AuthorizerBuilder();
+    // authorizerBuilder.merge(auth as any);
 
-    const authz = authorizerBuilder.buildAuthenticated(token);
-    authz.authorize();
+    const authz = (auth as any).buildAuthenticated(token);
+    try {
+      authz.authorize();
+    } catch (error: unknown) {
+      console.log(error);
+      return new Response("Unauthorized", { status: 401 });
+    }
 
-    const image = await doCapture(await req.json());
+    const user = (() => {
+      const facts: any[] = authz.queryWithLimits(
+        rule`u($user) <- user($user)`,
+        {},
+      );
+      return facts[0].terms()[0];
+    })();
+
+    console.log(
+      `Capture Request from user:${user} for hostname:${url.hostname}`,
+    );
+
+    const image = await doCapture(captureRequest);
 
     return new Response(image, {
       status: 200,
@@ -157,7 +183,7 @@ interface CaptureRequest {
     scale?: number;
   };
 
-  input: { kind: "url"; value: string } | { kind: "contents"; value: string };
+  input: string;
 
   target:
     | { kind: "viewport" }
@@ -175,11 +201,7 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
   });
   const page = await context.newPage();
 
-  if (request.input.kind === "url") {
-    await page.goto(request.input.value, { waitUntil: "networkidle" });
-  } else {
-    await page.setContent(request.input.value, { waitUntil: "networkidle" });
-  }
+  await page.goto(request.input, { waitUntil: "networkidle" });
 
   const image = await (() => {
     if (request.target.kind === "viewport") {

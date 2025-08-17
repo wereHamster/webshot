@@ -149,7 +149,7 @@ Deno.serve({ port }, async (req) => {
   return new Response("Not Found", { status: 404 });
 });
 
-function getUser(authz: any) {
+function getUser(authz: any): string {
   const facts: any[] = authz.queryWithLimits(
     rule`u($user) <- user($user)`,
     {},

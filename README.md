@@ -137,3 +137,25 @@ If the page needs to load external resources (images, fonts, data via XHR etc.),
 The service is not designed to be directly accessible by end-users.
 Even though the API exposes only a limited set of capabilities, they could still be used by malicious users to exfiltrate information via the created screenshots.
 You should only give API access to users who you fully trust.
+
+## Image Stabilization
+
+One of the big challenges when taking images of a HTML page is how to wait until the page has finished rendering and has stabilized enough so that the image can be taken.
+For example, images and fonts are external resources that need to be fetched asynchronously.
+The page may need to run JavaScript to fetch data from remote APIs and dynamically render certain parts of the page.
+Or the page uses CSS transitions that need to settle.
+
+One commonly used strategy is to wait until there are no more network requests for a certain amount of time (usually 500ms).
+That strategy works surprisingly well for most cases, but comes with an inherent extra delay.
+If the page itself renders quickly (think inline HTML, no JavaScript, no CSS transitions, etc) this `networkidle` delay itself is more costly than the actual rendering.
+
+It is difficult to come up with alternative strategies that do not involve a fixed delay but work well for a broad range of situations.
+The best option for WebShot is to offer multiple strategies and let the user pick one.
+
+At this point however, WebShot does not offer a way to customize the image stabilization strategy.
+It uses `networkidle`, with its inherent 500ms delay.
+
+Here are some useful resources about what strategies other products have taken:
+
+ - GitHub: https://github.blog/open-source/git/framework-building-open-graph-images/
+ - Argos CI: TODO

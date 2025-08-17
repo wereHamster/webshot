@@ -25,9 +25,65 @@ The API endpoints and request / response types are designed to be compatible wit
 
 ### Authorization
 
-Authorization is done via Bearer tokens.
+Authorization is done via Bearer tokens using [Biscuit](https://www.biscuitsec.org/) - a cryptographically secured authorization token format.
 
-TODO: explain how to mint these tokens.
+#### Token Format
+
+Tokens are passed in the `Authorization` header as Bearer tokens.
+
+```
+Authorization: Bearer <base64-encoded-biscuit-token>
+```
+
+#### Required Claims
+
+All tokens must contain a `user` fact identifying the authenticated user.
+
+There are no implicit permissions associated with a user.
+The user fact is currently only used for logging.
+This is due to the stateless nature of the service (there is no database to store user permissions in).
+
+```
+user("username");
+```
+
+#### Operation-Specific Authorization
+
+Each endpoint enforces specific authorization rules.
+
+**For `/v1/render`:**
+- Requires `user($u)` fact (any authenticated user)
+- Operation is automatically tagged as `operation("render")`
+
+**For `/v1/capture`:**
+- Requires `user($u)` fact (any authenticated user)
+- Operation is automatically tagged as `operation("capture")`
+- Hostname is automatically extracted and tagged as `hostname("example.com")`
+
+#### Creating Tokens
+
+Tokens must be signed with the service's private key. Here's an example of creating a basic token:
+
+```typescript
+import { biscuit, PrivateKey } from "@biscuit-auth/biscuit-wasm";
+
+const privateKey = PrivateKey.fromString("your-private-key");
+
+const builder = biscuit`
+  user("alice");
+`;
+
+const token = builder.build(privateKey).toBase64();
+```
+
+The service validates tokens using the corresponding public key and enforces the authorization rules at request time.
+
+#### Security Model
+
+- Tokens are cryptographically signed and cannot be forged
+- Each request is authorized based on the user identity and the specific operation being performed
+- For capture requests, the target hostname is automatically validated as part of the authorization check
+- Time-based validation ensures tokens are evaluated with the current timestamp
 
 ### Endpoints
 

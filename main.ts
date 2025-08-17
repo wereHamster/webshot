@@ -192,6 +192,7 @@ interface CaptureRequest {
       height: number;
     };
     scale?: number;
+    extraHTTPHeaders?: Record<string, string>;
   };
 
   input: string;
@@ -209,6 +210,7 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
     ...devices["Desktop Chrome"],
     viewport: request.device.viewport,
     deviceScaleFactor: request.device.scale ?? 1,
+    extraHTTPHeaders: request.device.extraHTTPHeaders ?? {},
   });
   const page = await context.newPage();
 

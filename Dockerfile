@@ -1,4 +1,4 @@
-FROM denoland/deno:2.3.5
+FROM denoland/deno:2.4.3
 
 ARG DEBIAN_FRONTEND=noninteractive
 

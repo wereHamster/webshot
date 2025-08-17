@@ -1,6 +1,7 @@
 import { Browser, chromium, devices } from "npm:playwright@1.52.0";
 
 import {
+  Authorizer,
   // biscuit,
   authorizer,
   Biscuit,
@@ -149,13 +150,21 @@ Deno.serve({ port }, async (req) => {
   return new Response("Not Found", { status: 404 });
 });
 
-function getUser(authz: any): string {
-  const facts: any[] = authz.queryWithLimits(
+/**
+ * Extract the user() fact from the Authorizer.
+ *
+ * All our tokens are expected to have that fact.
+ */
+function getUser(authz: Authorizer): string {
+  const facts = authz.queryWithLimits(
     rule`u($user) <- user($user)`,
     {},
   );
 
-  return facts[0].terms()[0];
+  const user = facts[0]?.terms()?.[0];
+  invariant(!!user, "token must have a user fact");
+
+  return user;
 }
 
 interface RenderRequest {
@@ -245,4 +254,13 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
   await context.close();
 
   return image;
+}
+
+function invariant<const T = unknown>(
+  condition: T,
+  message: string,
+): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
 }

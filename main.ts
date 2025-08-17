@@ -95,13 +95,7 @@ Deno.serve({ port }, async (req) => {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const user = (() => {
-      const facts: any[] = authz.queryWithLimits(
-        rule`u($user) <- user($user)`,
-        {},
-      );
-      return facts[0].terms()[0];
-    })();
+    const user = getUser(authz);
 
     console.log(`Render Request from user:${user}`);
 
@@ -136,13 +130,7 @@ Deno.serve({ port }, async (req) => {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const user = (() => {
-      const facts: any[] = authz.queryWithLimits(
-        rule`u($user) <- user($user)`,
-        {},
-      );
-      return facts[0].terms()[0];
-    })();
+    const user = getUser(authz);
 
     console.log(
       `Capture Request from user:${user} for hostname:${url.hostname}`,
@@ -160,6 +148,15 @@ Deno.serve({ port }, async (req) => {
 
   return new Response("Not Found", { status: 404 });
 });
+
+function getUser(authz: any) {
+  const facts: any[] = authz.queryWithLimits(
+    rule`u($user) <- user($user)`,
+    {},
+  );
+
+  return facts[0].terms()[0];
+}
 
 interface RenderRequest {
   device: {

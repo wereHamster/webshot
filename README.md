@@ -62,7 +62,8 @@ Each endpoint enforces specific authorization rules.
 
 #### Creating Tokens
 
-Tokens must be signed with the service's private key. Here's an example of creating a basic token:
+Tokens must be signed with the service's private key.
+Here's an example of creating a basic token:
 
 ```typescript
 import { biscuit, PrivateKey } from "@biscuit-auth/biscuit-wasm";
@@ -75,6 +76,33 @@ const builder = biscuit`
 
 const token = builder.build(privateKey).toBase64();
 ```
+
+#### Attenuated Tokens
+
+You can create more restrictive tokens by adding additional constraints.
+For example, to create a token that can only be used for capture operations on `example.com`:
+
+```typescript
+import { biscuit, PrivateKey } from "@biscuit-auth/biscuit-wasm";
+
+const privateKey = PrivateKey.fromString("your-private-key");
+
+const builder = biscuit`
+  user("alice");
+
+  check if time($time), $time < ${new Date("2026-01-01T00:00:00Z")};
+  check if operation("capture");
+  check if hostname("example.com");
+
+`;
+
+const restrictedToken = builder.build(privateKey).toBase64();
+```
+
+This token will be rejected if used for:
+- The `/v1/render` endpoint (wrong operation)
+- Capturing any hostname other than `example.com`
+- Any request made after the specified expiration date
 
 The service validates tokens using the corresponding public key and enforces the authorization rules at request time.
 

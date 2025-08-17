@@ -3,7 +3,6 @@ import { Browser, chromium, devices } from "npm:playwright@1.52.0";
 import {
   // biscuit,
   authorizer,
-  AuthorizerBuilder,
   Biscuit,
   KeyPair,
   PrivateKey,
@@ -54,6 +53,8 @@ const browserPromise: Promise<Browser> = chromium.launch({
 
 // const builder = biscuit`
 //   user("nobody");
+//
+//   check if time($time), $time < ${new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)};
 // `;
 // console.log(builder.build(privateKey).toBase64());
 
@@ -86,11 +87,23 @@ Deno.serve({ port }, async (req) => {
       allow if user($u);
     `;
 
-    const authorizerBuilder = new AuthorizerBuilder();
-    authorizerBuilder.merge(auth as any);
+    const authz = (auth as any).buildAuthenticated(token);
+    try {
+      authz.authorize();
+    } catch (error: unknown) {
+      console.log(error);
+      return new Response("Unauthorized", { status: 401 });
+    }
 
-    const authz = authorizerBuilder.buildAuthenticated(token);
-    authz.authorize();
+    const user = (() => {
+      const facts: any[] = authz.queryWithLimits(
+        rule`u($user) <- user($user)`,
+        {},
+      );
+      return facts[0].terms()[0];
+    })();
+
+    console.log(`Render Request from user:${user}`);
 
     const image = await doRender(renderRequest);
 
@@ -114,9 +127,6 @@ Deno.serve({ port }, async (req) => {
 
       allow if user($u);
     `;
-
-    // const authorizerBuilder = new AuthorizerBuilder();
-    // authorizerBuilder.merge(auth as any);
 
     const authz = (auth as any).buildAuthenticated(token);
     try {

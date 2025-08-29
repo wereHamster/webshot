@@ -27,6 +27,14 @@ The API endpoints and request / response types are designed to be compatible wit
 
 Authorization is done via Bearer tokens using [Biscuit](https://www.biscuitsec.org/) - a cryptographically secured authorization token format.
 
+#### Configuring your Private Key
+
+Ensure your runtime environment defines an environment variable `BISCUIT_PRIVATE_KEY` containing your private key. **Note:** The key string must be prefixed by the encryption algorithm, e.g.
+
+```
+BISCUIT_PRIVATE_KEY=ed25519-private/my-super-secret-key
+```
+
 #### Token Format
 
 Tokens are passed in the `Authorization` header as Bearer tokens.

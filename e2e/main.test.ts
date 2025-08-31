@@ -2,6 +2,7 @@ import { assertEquals, assertExists } from "jsr:@std/assert";
 import { biscuit, PrivateKey } from "@biscuit-auth/biscuit-wasm";
 
 const BASE_URL = "http://localhost:3000";
+const build = Deno.env.get("BUILD") ?? "head";
 
 function generateTestToken(): string {
   const privateKeyString = Deno.env.get("BISCUIT_PRIVATE_KEY");
@@ -18,18 +19,6 @@ function generateTestToken(): string {
   `;
 
   return builder.build(privateKey).toBase64();
-}
-
-async function postImageToRemoteUrl(imageData: Uint8Array) {
-  const build = Deno.env.get("BUILD") ?? "head";
-
-  await uploadImage({
-    build,
-    collection: "End-to-End Tests/v1",
-    snapshot: "Render",
-    formula: "default",
-    payload: new File([imageData], "image.png", { type: "image/png" }),
-  });
 }
 
 interface UploadImageRequest {
@@ -98,5 +87,11 @@ Deno.test("render", async () => {
   assertExists(imageData);
   assertEquals(imageData.length > 0, true);
 
-  await postImageToRemoteUrl(imageData);
+  await uploadImage({
+    build,
+    collection: "End-to-End Tests/v1",
+    snapshot: "Render",
+    formula: "1200x600-scale:2",
+    payload: new File([imageData], "image.png", { type: "image/png" }),
+  });
 });

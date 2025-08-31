@@ -51,6 +51,7 @@ Deno.test("render", async () => {
     body: JSON.stringify(payload),
   });
 
+  console.log(await response.text())
   assertEquals(response.status, 200);
   assertExists(response.body);
 

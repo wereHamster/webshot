@@ -4,11 +4,18 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  URNERYS: app.urnerys.dev
+  BUILD: "github-run-${{ github.run_id }}-${{ github.run_attempt }}"
+
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
+    - run: |
+        curl -sf -X POST -H "Content-Type: application/json" -d '{ "id": "'"$BUILD"'", "build": { "origin": { "commit": "${{ github.sha }}" } } }' "https://$URNERYS/api/v1/projects/webshot/builds"
+
     - name: Checkout code
       uses: actions/checkout@v4
 

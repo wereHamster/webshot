@@ -29,7 +29,7 @@ async function postImageToRemoteUrl(
   await uploadImage({
     build,
     collection: "E2E/v1/Render",
-    snapshot: "",
+    snapshot: "default",
     formula: "default",
     payload: new File([imageData], "image.png", { type: "image/png" }),
   })

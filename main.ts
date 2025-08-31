@@ -68,7 +68,7 @@ Deno.serve({ port }, async (req) => {
 
   const authorization = req.headers.get("Authorization");
   if (!authorization) {
-    return new Response("Unauthorized (missing Authorization header)", { status: 401 });
+    return new Response("Unauthorized", { status: 401 });
   }
 
   /*
@@ -94,7 +94,7 @@ Deno.serve({ port }, async (req) => {
 
     const authz = (auth as any).buildAuthenticated(token);
     try {
-      authz.authorize();
+      authz.authorizeWithLimits({});
     } catch (error: unknown) {
       console.log(error);
       return new Response("Unauthorized", { status: 401 });
@@ -129,7 +129,7 @@ Deno.serve({ port }, async (req) => {
 
     const authz = (auth as any).buildAuthenticated(token);
     try {
-      authz.authorize();
+      authz.authorizeWithLimits({});
     } catch (error: unknown) {
       console.log(error);
       return new Response("Unauthorized", { status: 401 });

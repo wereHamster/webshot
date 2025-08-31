@@ -97,7 +97,7 @@ Deno.serve({ port }, async (req) => {
       authz.authorizeWithLimits({
         max_facts: 1000, // default: 1000
         max_iterations: 100, // default: 100
-        max_time_micro: 1000, // default: 1000 (1ms)
+        max_time_micro: 10_000, // default: 1000 (1ms)
       });
     } catch (error: unknown) {
       console.log(error);

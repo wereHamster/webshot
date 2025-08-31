@@ -20,10 +20,7 @@ function generateTestToken(): string {
   return builder.build(privateKey).toBase64();
 }
 
-async function postImageToRemoteUrl(
-  imageData: Uint8Array,
-  remoteUrl: string,
-): Promise<boolean> {
+async function postImageToRemoteUrl(imageData: Uint8Array) {
   const build = Deno.env.get("BUILD") ?? "head";
 
   await uploadImage({
@@ -32,8 +29,7 @@ async function postImageToRemoteUrl(
     snapshot: "default",
     formula: "default",
     payload: new File([imageData], "image.png", { type: "image/png" }),
-  })
-  return true;
+  });
 }
 
 interface UploadImageRequest {
@@ -44,24 +40,29 @@ interface UploadImageRequest {
   payload: File;
 }
 
-async function uploadImage({ build, collection, snapshot, formula, payload }: UploadImageRequest) {
+async function uploadImage(
+  { build, collection, snapshot, formula, payload }: UploadImageRequest,
+) {
   const body = new FormData();
   body.set("collection", collection);
   body.set("snapshot", snapshot);
   body.set("formula", formula);
   body.set("payload", payload);
 
-  const res = await fetch(`https://app.urnerys.dev/api/v1/projects/webshot/builds/${build}/images`, {
-    method: "POST",
-    body,
-  });
+  const res = await fetch(
+    `https://app.urnerys.dev/api/v1/projects/webshot/builds/${build}/images`,
+    {
+      method: "POST",
+      body,
+    },
+  );
 
   if (!res.ok) {
     console.log(res.statusText);
     throw res;
   }
 
-  await res.text()
+  await res.text();
 }
 
 Deno.test("render", async () => {
@@ -97,7 +98,5 @@ Deno.test("render", async () => {
   assertExists(imageData);
   assertEquals(imageData.length > 0, true);
 
-  const remoteUrl = "https://example-remote-storage.com/upload";
-  const uploadSuccess = await postImageToRemoteUrl(imageData, remoteUrl);
-  assertEquals(uploadSuccess, true);
+  await postImageToRemoteUrl(imageData);
 });

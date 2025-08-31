@@ -25,8 +25,8 @@ async function postImageToRemoteUrl(imageData: Uint8Array) {
 
   await uploadImage({
     build,
-    collection: "E2E/v1/Render",
-    snapshot: "default",
+    collection: "End-to-End Tests/v1",
+    snapshot: "Render",
     formula: "default",
     payload: new File([imageData], "image.png", { type: "image/png" }),
   });

@@ -24,8 +24,42 @@ async function postImageToRemoteUrl(
   imageData: Uint8Array,
   remoteUrl: string,
 ): Promise<boolean> {
-  // console.log(`Stubbed: Would post ${imageData.length} bytes to ${remoteUrl}`);
+  const build = Deno.env.get("BUILD") ?? "head";
+
+  await uploadImage({
+    build,
+    collection: "E2E/v1/Render",
+    snapshot: "",
+    formula: "default",
+    payload: new File([imageData], "image.png", { type: "image/png" }),
+  })
   return true;
+}
+
+interface UploadImageRequest {
+  build: string;
+  collection: string;
+  snapshot: string;
+  formula: string;
+  payload: File;
+}
+
+async function uploadImage({ build, collection, snapshot, formula, payload }: UploadImageRequest) {
+  const body = new FormData();
+  body.set("collection", collection);
+  body.set("snapshot", snapshot);
+  body.set("formula", formula);
+  body.set("payload", payload);
+
+  const res = await fetch(`https://app.urnerys.dev/api/v1/projects/webshot/builds/${build}/images`, {
+    method: "POST",
+    body,
+  });
+
+  if (!res.ok) {
+    console.log(res.statusText);
+    throw res;
+  }
 }
 
 Deno.test("render", async () => {

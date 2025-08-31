@@ -1,0 +1,52 @@
+name: Baseline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  URNERYS: app.urnerys.dev
+  BUILD: "github-run-${{ github.run_id }}-${{ github.run_attempt }}"
+  BISCUIT_PRIVATE_KEY: ed25519-private/869fb6eef6b04ee212479b344690549c9e77bde6c3412b5badcd8b65f89d8c70
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: |
+          curl -sf -X POST -H "Content-Type: application/json" -d '{ "id": "'"$BUILD"'", "build": { "origin": { "commit": "${{ github.sha }}" } } }' "https://$URNERYS/api/v1/projects/webshot/builds"
+
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+
+      - run: deno run -A npm:playwright@1.52.0 install chromium-headless-shell
+
+      - run: |
+          deno run -A main.ts &
+          echo $! > server.pid
+
+          for i in {1..30}; do
+            if curl -f http://localhost:3000 > /dev/null 2>&1; then
+              echo "Server is ready"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+
+          deno test -A e2e/main.test.ts
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi
+
+      - run: |
+          curl -sf -X PATCH -H "Content-Type: application/json" -d '{ "baseline": { "build": "'"$BUILD"'" } }' "https://$URNERYS/api/v1/projects/webshot/baselines/production"

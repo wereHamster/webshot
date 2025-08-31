@@ -24,7 +24,7 @@ async function postImageToRemoteUrl(
   imageData: Uint8Array,
   remoteUrl: string,
 ): Promise<boolean> {
-  console.log(`Stubbed: Would post ${imageData.length} bytes to ${remoteUrl}`);
+  // console.log(`Stubbed: Would post ${imageData.length} bytes to ${remoteUrl}`);
   return true;
 }
 

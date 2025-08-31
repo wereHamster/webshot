@@ -41,7 +41,7 @@ jobs:
         done
 
     - name: Run e2e tests
-      run: deno test --allow-all e2e/main.test.ts
+      run: deno test -A e2e/main.test.ts
 
     - name: Stop server
       if: always()

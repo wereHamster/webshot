@@ -2,7 +2,7 @@ name: Baseline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 env:
   URNERYS: app.urnerys.dev

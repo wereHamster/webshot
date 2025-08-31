@@ -60,6 +60,8 @@ async function uploadImage({ build, collection, snapshot, formula, payload }: Up
     console.log(res.statusText);
     throw res;
   }
+
+  await res.text()
 }
 
 Deno.test("render", async () => {

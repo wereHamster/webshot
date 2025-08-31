@@ -1,0 +1,53 @@
+name: Pull Request Verification
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.x
+
+    - name: Install Playwright browsers
+      run: deno run -A --unstable-npm npm:playwright@1.52.0/cli.js install chromium
+
+    - name: Generate Biscuit private key
+      run: |
+        BISCUIT_PRIVATE_KEY=$(deno eval "import {PrivateKey} from '@biscuit-auth/biscuit-wasm'; console.log(PrivateKey.random().toString())")
+        echo "BISCUIT_PRIVATE_KEY=$BISCUIT_PRIVATE_KEY" >> $GITHUB_ENV
+
+    - name: Start server in background
+      run: |
+        deno run --allow-all main.ts &
+        echo $! > server.pid
+
+    - name: Wait for server to be ready
+      run: |
+        for i in {1..30}; do
+          if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            echo "Server is ready"
+            break
+          fi
+          echo "Waiting for server... ($i/30)"
+          sleep 2
+        done
+
+    - name: Run e2e tests
+      run: deno test --allow-all e2e/main.test.ts
+
+    - name: Stop server
+      if: always()
+      run: |
+        if [ -f server.pid ]; then
+          kill $(cat server.pid) || true
+          rm server.pid
+        fi

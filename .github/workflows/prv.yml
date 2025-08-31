@@ -54,3 +54,7 @@ jobs:
           kill $(cat server.pid) || true
           rm server.pid
         fi
+
+
+    - run: |
+        curl -sf -X POST -H "Content-Type: application/json" -d '{ "check": { "baseline": "production" } }' "https://$URNERYS/api/v1/projects/webshot/builds/$BUILD/checks"

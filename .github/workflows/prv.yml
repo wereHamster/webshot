@@ -29,8 +29,6 @@ jobs:
         deno run -A main.ts &
         echo $! > server.pid
 
-    - name: Wait for server to be ready
-      run: |
         for i in {1..30}; do
           if curl -f http://localhost:3000 > /dev/null 2>&1; then
             echo "Server is ready"
@@ -40,8 +38,7 @@ jobs:
           sleep 2
         done
 
-    - name: Run e2e tests
-      run: deno test -A e2e/main.test.ts
+        deno test -A e2e/main.test.ts
 
     - name: Stop server
       if: always()

@@ -95,9 +95,9 @@ Deno.serve({ port }, async (req) => {
     const authz = (auth as any).buildAuthenticated(token);
     try {
       authz.authorizeWithLimits({
-        max_facts: 100, // default: 1000
-        max_iterations: 10, // default: 100
-        max_time_micro: 100000, // default: 1000 (1ms)
+        max_facts: 1000, // default: 1000
+        max_iterations: 100, // default: 100
+        max_time_micro: 1000, // default: 1000 (1ms)
       });
     } catch (error: unknown) {
       console.log(error);

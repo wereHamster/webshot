@@ -22,8 +22,7 @@ jobs:
 
     - name: Generate Biscuit private key
       run: |
-        BISCUIT_PRIVATE_KEY=$(deno eval "import {PrivateKey} from '@biscuit-auth/biscuit-wasm'; console.log(PrivateKey.random().toString())")
-        echo "BISCUIT_PRIVATE_KEY=$BISCUIT_PRIVATE_KEY" >> $GITHUB_ENV
+        echo "BISCUIT_PRIVATE_KEY=ed25519-private/869fb6eef6b04ee212479b344690549c9e77bde6c3412b5badcd8b65f89d8c70" >> $GITHUB_ENV
 
     - name: Start server in background
       run: |

@@ -62,6 +62,10 @@ const browserPromise: Promise<Browser> = chromium.launch({
 Deno.serve({ port }, async (req) => {
   const url = new URL(req.url);
 
+  if (url.pathname === "/") {
+    return new Response("", { status: 200 });
+  }
+
   const authorization = req.headers.get("Authorization");
   if (!authorization) {
     return new Response("Unauthorized", { status: 401 });

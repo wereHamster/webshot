@@ -7,6 +7,7 @@ on:
 env:
   URNERYS: app.urnerys.dev
   BUILD: "github-run-${{ github.run_id }}-${{ github.run_attempt }}"
+  BISCUIT_PRIVATE_KEY: ed25519-private/869fb6eef6b04ee212479b344690549c9e77bde6c3412b5badcd8b65f89d8c70
 
 jobs:
   test:
@@ -16,23 +17,15 @@ jobs:
       - run: |
           curl -sf -X POST -H "Content-Type: application/json" -d '{ "id": "'"$BUILD"'", "build": { "origin": { "commit": "${{ github.sha }}" } } }' "https://$URNERYS/api/v1/projects/webshot/builds"
 
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v1
         with:
           deno-version: v2.x
 
-      - name: Install Playwright browsers
-        run: deno run -A npm:playwright@1.52.0 install chromium-headless-shell
+      - run: deno run -A npm:playwright@1.52.0 install chromium-headless-shell
 
-      - name: Generate Biscuit private key
-        run: |
-          echo "BISCUIT_PRIVATE_KEY=ed25519-private/869fb6eef6b04ee212479b344690549c9e77bde6c3412b5badcd8b65f89d8c70" >> $GITHUB_ENV
-
-      - name: Start server in background
-        run: |
+      - run: |
           deno run -A main.ts &
           echo $! > server.pid
 

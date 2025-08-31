@@ -18,7 +18,7 @@ jobs:
         deno-version: v1.x
 
     - name: Install Playwright browsers
-      run: deno run -A --unstable-npm npm:playwright@1.52.0/cli.js install chromium
+      run: deno run -A npm:playwright@1.52.0 install chromium-headless-shell
 
     - name: Generate Biscuit private key
       run: |
@@ -27,7 +27,7 @@ jobs:
 
     - name: Start server in background
       run: |
-        deno run --allow-all main.ts &
+        deno run -A main.ts &
         echo $! > server.pid
 
     - name: Wait for server to be ready

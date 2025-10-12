@@ -1,6 +1,6 @@
 <div align="center">
   <h1>WebShot</h1>
-  <div>Turn <b>WEB</b>-sites into screen-<b>SHOT</b>-s</div>
+  <div>Turn <b>WEB</b>-pages into screen-<b>SHOT</b>-s</div>
 </div>
 
 ---

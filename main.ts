@@ -1,4 +1,4 @@
-import { Browser, chromium, devices } from "npm:playwright@1.52.0";
+import { Browser, chromium, devices } from "playwright";
 
 import {
   Authorizer,

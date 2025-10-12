@@ -43,7 +43,8 @@
   },
   "workspace": {
     "dependencies": [
-      "npm:@biscuit-auth/biscuit-wasm@~0.6.0-beta.1"
+      "npm:@biscuit-auth/biscuit-wasm@~0.6.0-beta.1",
+      "npm:playwright@1.52.0"
     ]
   }
 }

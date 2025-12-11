@@ -80,7 +80,7 @@ WORKDIR /usr/src/app
 
 COPY deno.* main.ts ./
 RUN deno cache main.ts
-RUN deno run -A "npm:playwright@1.56.0" install chromium-headless-shell
+RUN deno run -A "npm:playwright@1.57.0" install chromium-headless-shell
 
 EXPOSE 3000
 CMD [ "deno", "run", "-A", "main.ts" ]

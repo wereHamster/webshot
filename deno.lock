@@ -4,7 +4,7 @@
     "jsr:@std/assert@*": "1.0.14",
     "jsr:@std/internal@^1.0.10": "1.0.10",
     "npm:@biscuit-auth/biscuit-wasm@0.6": "0.6.0",
-    "npm:playwright@1.56.0": "1.56.0"
+    "npm:playwright@1.57.0": "1.57.0"
   },
   "jsr": {
     "@std/assert@1.0.14": {
@@ -26,12 +26,12 @@
       "os": ["darwin"],
       "scripts": true
     },
-    "playwright-core@1.56.0": {
-      "integrity": "sha512-1SXl7pMfemAMSDn5rkPeZljxOCYAmQnYLBTExuh6E8USHXGSX3dx6lYZN/xPpTz1vimXmPA9CDnILvmJaB8aSQ==",
+    "playwright-core@1.57.0": {
+      "integrity": "sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ==",
       "bin": true
     },
-    "playwright@1.56.0": {
-      "integrity": "sha512-X5Q1b8lOdWIE4KAoHpW3SE8HvUB+ZZsUoN64ZhjnN8dOb1UpujxBtENGiZFE+9F/yhzJwYa+ca3u43FeLbboHA==",
+    "playwright@1.57.0": {
+      "integrity": "sha512-ilYQj1s8sr2ppEJ2YVadYBN0Mb3mdo9J0wQ+UuDhzYqURwSoW4n1Xs5vs7ORwgDGmyEh33tRMeS8KhdkMoLXQw==",
       "dependencies": [
         "playwright-core"
       ],
@@ -44,7 +44,7 @@
   "workspace": {
     "dependencies": [
       "npm:@biscuit-auth/biscuit-wasm@0.6",
-      "npm:playwright@1.56.0"
+      "npm:playwright@1.57.0"
     ]
   }
 }

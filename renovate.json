@@ -5,5 +5,6 @@
     ":dependencyDashboard",
     ":enableVulnerabilityAlerts",
     "helpers:pinGitHubActionDigests"
-  ]
+  ],
+  "minimumReleaseAge": "9 days"
 }

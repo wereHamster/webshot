@@ -240,28 +240,49 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
   });
   const page = await context.newPage();
 
-  await page.goto(request.input, { waitUntil: "networkidle" });
+  try {
+    await page.goto(request.input, { waitUntil: "networkidle" });
 
-  const image = await (() => {
-    if (request.target.kind === "viewport") {
-      return page.screenshot({
-        type: "png",
-      });
-    } else if (request.target.kind === "page") {
-      return page.screenshot({
-        type: "png",
-        fullPage: true,
-      });
-    } else {
-      return page.locator(request.target.locator).screenshot({
-        type: "png",
-      });
+    return await (() => {
+      if (request.target.kind === "viewport") {
+        return page.screenshot({
+          type: "png",
+        });
+      } else if (request.target.kind === "page") {
+        return page.screenshot({
+          type: "png",
+          fullPage: true,
+        });
+      } else {
+        return page.locator(request.target.locator).screenshot({
+          type: "png",
+        });
+      }
+    })();
+  } catch (error: unknown) {
+    /*
+     * If an error occurs, dump the request URL and error to the console.
+     *
+     * Also, attempt to take a screenshot for debugging purposes. This screenshot
+     * is taken with really low quality so that the image is as small as possible.
+     * This is because the platform where this service is deployed may limit the
+     * size of individual log entries.
+     */
+
+    console.error({ url: request.input }, error);
+
+    try {
+      const image = await page.screenshot({ type: 'jpeg', quality: 10 });
+      console.info(image.toString('base64'));
+    } catch {
+      // ignore
     }
-  })();
 
-  await context.close();
-
-  return image;
+    throw error;
+  } finally {
+    await page.close();
+    await context.close();
+  }
 }
 
 function invariant<const T = unknown>(

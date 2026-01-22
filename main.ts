@@ -240,11 +240,10 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
   });
   const page = await context.newPage();
 
-  let image: Uint8Array;
   try {
     await page.goto(request.input, { waitUntil: "networkidle" });
 
-    image = await (() => {
+    return await (() => {
       if (request.target.kind === "viewport") {
         return page.screenshot({
           type: "png",
@@ -284,8 +283,6 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
     await page.close();
     await context.close();
   }
-
-  return image;
 }
 
 function invariant<const T = unknown>(

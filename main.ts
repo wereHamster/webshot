@@ -1,3 +1,5 @@
+import { SpanStatusCode, trace } from "@opentelemetry/api";
+
 import { Browser, chromium, devices } from "playwright";
 
 import {
@@ -9,6 +11,8 @@ import {
   PrivateKey,
   rule,
 } from "@biscuit-auth/biscuit-wasm";
+
+const tracer = trace.getTracer("webshot");
 
 /**
  * The port on which the HTTP server listens.
@@ -41,6 +45,7 @@ const browserPromise: Promise<Browser> = chromium.launch({
   args: [
     "--no-sandbox",
     "--disable-dev-shm-usage",
+    "--disable-gpu",
 
     // Attempt to improve font rendering.
     "--font-render-hinting=none",
@@ -60,102 +65,120 @@ const browserPromise: Promise<Browser> = chromium.launch({
 // console.log(builder.build(privateKey).toBase64());
 
 Deno.serve({ port }, async (req) => {
-  const url = new URL(req.url);
-
-  if (url.pathname === "/") {
-    return new Response("", { status: 200 });
-  }
-
-  const authorization = req.headers.get("Authorization");
-  if (!authorization) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  /*
-   * Extract the Biscuit token from the Authorization header.
-   */
-  let token: Biscuit;
-  try {
-    token = Biscuit.fromBase64(authorization.slice(7), publicKey);
-  } catch (error: unknown) {
-    console.log("Biscuit.fromBase64", { authorization }, error);
-    return new Response("Bad Request", { status: 400 });
-  }
-
-  if (req.method === "POST" && url.pathname === "/v1/render") {
-    const renderRequest: RenderRequest = await req.json();
-
-    const auth = authorizer`
-      time(${new Date()});
-      operation("render");
-
-      allow if user($u);
-    `;
-
-    const authz = (auth as any).buildAuthenticated(token);
+  return await tracer.startActiveSpan("request", async (span) => {
     try {
-      authz.authorizeWithLimits({
-        max_facts: 1000, // default: 1000
-        max_iterations: 100, // default: 100
-        max_time_micro: 100_000, // default: 1000 (1ms)
+      const url = new URL(req.url);
+
+      if (url.pathname === "/") {
+        return new Response("", { status: 200 });
+      }
+
+      const authorization = req.headers.get("Authorization");
+      if (!authorization) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      /*
+       * Extract the Biscuit token from the Authorization header.
+       */
+      let token: Biscuit;
+      try {
+        token = Biscuit.fromBase64(authorization.slice(7), publicKey);
+      } catch (error: unknown) {
+        console.log("Biscuit.fromBase64", { authorization }, error);
+        return new Response("Bad Request", { status: 400 });
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/render") {
+        const renderRequest: RenderRequest = await req.json();
+
+        const auth = authorizer`
+          time(${new Date()});
+          operation("render");
+
+          allow if user($u);
+        `;
+
+        const authz = (auth as any).buildAuthenticated(token);
+        try {
+          authz.authorizeWithLimits({
+            max_facts: 1000, // default: 1000
+            max_iterations: 100, // default: 100
+            max_time_micro: 100_000, // default: 1000 (1ms)
+          });
+        } catch (error: unknown) {
+          console.log(error);
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const user = getUser(authz);
+
+        console.log(`Render Request from user:${user}`);
+
+        const image = await doRender(renderRequest);
+
+        return new Response(image, {
+          status: 200,
+          headers: {
+            "Content-Type": "image/png",
+          },
+        });
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/capture") {
+        const captureRequest: CaptureRequest = await req.json();
+
+        const url = new URL(captureRequest.input);
+
+        const auth = authorizer`
+          time(${new Date()});
+          operation("capture");
+          hostname(${url.hostname});
+
+          allow if user($u);
+        `;
+
+        const authz = (auth as any).buildAuthenticated(token);
+        try {
+          tracer.startActiveSpan("authz.authorizeWithLimits", (span) => {
+            try {
+              return authz.authorizeWithLimits({});
+            } finally {
+              span.end();
+            }
+          });
+        } catch (error: unknown) {
+          console.log(error);
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const user = getUser(authz);
+
+        console.log(
+          `Capture Request from user:${user} for hostname:${url.hostname}`,
+        );
+
+        const image = await doCapture(captureRequest);
+
+        return new Response(image, {
+          status: 200,
+          headers: {
+            "Content-Type": "image/png",
+          },
+        });
+      }
+
+      return new Response("Not Found", { status: 404 });
+    } catch (error: unknown) {
+      span.setStatus({
+        code: SpanStatusCode.ERROR,
       });
-    } catch (error: unknown) {
-      console.log(error);
-      return new Response("Unauthorized", { status: 401 });
+
+      throw error;
+    } finally {
+      span.end();
     }
-
-    const user = getUser(authz);
-
-    console.log(`Render Request from user:${user}`);
-
-    const image = await doRender(renderRequest);
-
-    return new Response(image, {
-      status: 200,
-      headers: {
-        "Content-Type": "image/png",
-      },
-    });
-  }
-
-  if (req.method === "POST" && url.pathname === "/v1/capture") {
-    const captureRequest: CaptureRequest = await req.json();
-
-    const url = new URL(captureRequest.input);
-
-    const auth = authorizer`
-      time(${new Date()});
-      operation("capture");
-      hostname(${url.hostname});
-
-      allow if user($u);
-    `;
-
-    const authz = (auth as any).buildAuthenticated(token);
-    try {
-      authz.authorizeWithLimits({});
-    } catch (error: unknown) {
-      console.log(error);
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    const user = getUser(authz);
-
-    console.log(
-      `Capture Request from user:${user} for hostname:${url.hostname}`,
-    );
-
-    const image = await doCapture(captureRequest);
-
-    return new Response(image, {
-      status: 200,
-      headers: {
-        "Content-Type": "image/png",
-      },
-    });
-  }
-
-  return new Response("Not Found", { status: 404 });
+  });
 });
 
 /**
@@ -164,10 +187,13 @@ Deno.serve({ port }, async (req) => {
  * All our tokens are expected to have that fact.
  */
 function getUser(authz: Authorizer): string {
-  const facts = authz.queryWithLimits(
-    rule`u($user) <- user($user)`,
-    {},
-  );
+  const facts = tracer.startActiveSpan("authz.queryWithLimits", (span) => {
+    try {
+      return authz.queryWithLimits(rule`u($user) <- user($user)`, {});
+    } finally {
+      span.end();
+    }
+  });
 
   const user = facts[0]?.terms()?.[0];
   invariant(!!user, "token must have a user fact");
@@ -230,35 +256,69 @@ interface CaptureRequest {
 }
 
 async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
-  const browser = await browserPromise;
+  const browser = await tracer.startActiveSpan(
+    "launchBrowser",
+    async (span) => {
+      try {
+        return await browserPromise;
+      } finally {
+        span.end();
+      }
+    },
+  );
 
-  const context = await browser.newContext({
-    ...devices["Desktop Chrome"],
-    viewport: request.device.viewport,
-    deviceScaleFactor: request.device.scale ?? 1,
-    extraHTTPHeaders: request.device.extraHTTPHeaders ?? {},
+  const context = await tracer.startActiveSpan("newContext", async (span) => {
+    try {
+      return await browser.newContext({
+        ...devices["Desktop Chrome"],
+        viewport: request.device.viewport,
+        deviceScaleFactor: request.device.scale ?? 1,
+        extraHTTPHeaders: request.device.extraHTTPHeaders ?? {},
+      });
+    } finally {
+      span.end();
+    }
   });
-  const page = await context.newPage();
+
+  const page = await tracer.startActiveSpan("newPage", async (span) => {
+    try {
+      return await context.newPage();
+    } finally {
+      span.end();
+    }
+  });
 
   try {
-    await page.goto(request.input, { waitUntil: "networkidle" });
-
-    return await (() => {
-      if (request.target.kind === "viewport") {
-        return page.screenshot({
-          type: "png",
-        });
-      } else if (request.target.kind === "page") {
-        return page.screenshot({
-          type: "png",
-          fullPage: true,
-        });
-      } else {
-        return page.locator(request.target.locator).screenshot({
-          type: "png",
-        });
+    await tracer.startActiveSpan("page.goto", async (span) => {
+      try {
+        await page.goto(request.input, { waitUntil: "networkidle" });
+      } finally {
+        span.end();
       }
-    })();
+    });
+
+    return await tracer.startActiveSpan("page.screenshot", async (span) => {
+      try {
+        return await (() => {
+          if (request.target.kind === "viewport") {
+            return page.screenshot({
+              type: "png",
+            });
+          } else if (request.target.kind === "page") {
+            return page.screenshot({
+              type: "png",
+              fullPage: true,
+            });
+          } else {
+            return page.locator(request.target.locator).screenshot({
+              type: "png",
+            });
+          }
+        })();
+      } finally {
+        span.end();
+      }
+    });
   } catch (error: unknown) {
     /*
      * If an error occurs, dump the request URL and error to the console.
@@ -272,16 +332,22 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
     console.error({ url: request.input }, error);
 
     try {
-      const image = await page.screenshot({ type: 'jpeg', quality: 10 });
-      console.info(image.toString('base64'));
+      const image = await page.screenshot({ type: "jpeg", quality: 10 });
+      console.info(image.toString("base64"));
     } catch {
       // ignore
     }
 
     throw error;
   } finally {
-    await page.close();
-    await context.close();
+    await tracer.startActiveSpan("cleanup", async (span) => {
+      try {
+        await page.close();
+        await context.close();
+      } finally {
+        span.end();
+      }
+    });
   }
 }
 

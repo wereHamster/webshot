@@ -4,6 +4,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends \
+    tini \
     # curl \
     # ca-certificates \
     # unzip \
@@ -83,4 +84,4 @@ RUN deno cache main.ts
 RUN deno run -A "npm:playwright@1.57.0" install chromium-headless-shell
 
 EXPOSE 3000
-CMD [ "deno", "run", "-A", "main.ts" ]
+ENTRYPOINT ["/usr/bin/tini", "--", "deno", "run", "-A", "main.ts"]

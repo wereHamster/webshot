@@ -20,6 +20,16 @@
             pkgs.google-cloud-sdk
           ];
         };
+
+        devShells.workflow = pkgs.mkShell {
+          buildInputs = [
+            pkgs.deno
+          ];
+
+          shellHook = ''
+            deno install --frozen >/dev/null 2>&1
+          '';
+        };
       }
     );
 }

@@ -15,20 +15,16 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = [
+          nativeBuildInputs = [
             pkgs.deno
             pkgs.google-cloud-sdk
           ];
         };
 
         devShells.workflow = pkgs.mkShell {
-          buildInputs = [
+          nativeBuildInputs = [
             pkgs.deno
           ];
-
-          shellHook = ''
-            deno install --frozen >/dev/null 2>&1
-          '';
         };
       }
     );

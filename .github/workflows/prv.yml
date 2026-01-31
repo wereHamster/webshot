@@ -18,6 +18,7 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
       - run: nix run github:nicknovitski/nix-develop .#workflow
+      - run: deno install --frozen
 
       - run: deno lint
 

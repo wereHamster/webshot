@@ -2,6 +2,7 @@
   "nodeModulesDir": "auto",
   "imports": {
     "@biscuit-auth/biscuit-wasm": "npm:@biscuit-auth/biscuit-wasm@^0.6.0",
+    "@opentelemetry/api": "npm:@opentelemetry/api@^1.9.0",
     "playwright": "npm:playwright@1.57.0"
   }
 }

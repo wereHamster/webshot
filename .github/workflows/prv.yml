@@ -25,6 +25,8 @@ jobs:
       - run: deno lint
 
   test:
+    name: Test
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
 
     steps:
@@ -33,11 +35,11 @@ jobs:
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: denoland/setup-deno@e95548e56dfa95d4e1a28d6f422fafe75c4c26fb # v2.0.3
-        with:
-          deno-version: v2.x
+      - uses: DeterminateSystems/nix-installer-action@c5a866b6ab867e88becbed4467b93592bce69f8a # v21
+      - run: nix run github:nicknovitski/nix-develop .#workflow
+      - run: deno install --frozen
 
-      - run: deno run -A npm:playwright@1.57.0 install chromium-headless-shell
+      - run: deno run -A playwright install chromium-headless-shell
 
       - run: |
           deno run -A main.ts &

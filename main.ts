@@ -19,7 +19,7 @@ const port: number = parseInt(Deno.env.get("PORT") ?? "3000", 10);
  * Biscuit private and public keys. These are used to sign and verify
  * authorization tokens.
  */
-const { privateKey, publicKey } = (() => {
+const { privateKey: _, publicKey } = (() => {
   const privateKeyString = Deno.env.get("BISCUIT_PRIVATE_KEY");
   if (!privateKeyString) {
     throw new Error("BISCUIT_PRIVATE_KEY environment variable is not set");
@@ -92,7 +92,7 @@ Deno.serve({ port }, async (req) => {
       allow if user($u);
     `;
 
-    const authz = (auth as any).buildAuthenticated(token);
+    const authz = auth.buildAuthenticated(token);
     try {
       authz.authorizeWithLimits({
         max_facts: 1000, // default: 1000
@@ -131,7 +131,7 @@ Deno.serve({ port }, async (req) => {
       allow if user($u);
     `;
 
-    const authz = (auth as any).buildAuthenticated(token);
+    const authz = auth.buildAuthenticated(token);
     try {
       authz.authorizeWithLimits({});
     } catch (error: unknown) {
@@ -272,8 +272,8 @@ async function doCapture(request: CaptureRequest): Promise<Uint8Array> {
     console.error({ url: request.input }, error);
 
     try {
-      const image = await page.screenshot({ type: 'jpeg', quality: 10 });
-      console.info(image.toString('base64'));
+      const image = await page.screenshot({ type: "jpeg", quality: 10 });
+      console.info(image.toString("base64"));
     } catch {
       // ignore
     }

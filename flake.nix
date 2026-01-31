@@ -15,9 +15,15 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = [
+          nativeBuildInputs = [
             pkgs.deno
             pkgs.google-cloud-sdk
+          ];
+        };
+
+        devShells.workflow = pkgs.mkShell {
+          nativeBuildInputs = [
+            pkgs.deno
           ];
         };
       }

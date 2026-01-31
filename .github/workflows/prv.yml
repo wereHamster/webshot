@@ -25,6 +25,8 @@ jobs:
       - run: deno lint
 
   test:
+    name: Test
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
 
     steps:

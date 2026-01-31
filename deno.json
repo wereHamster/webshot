@@ -2,6 +2,7 @@
   "nodeModulesDir": "auto",
   "imports": {
     "@biscuit-auth/biscuit-wasm": "npm:@biscuit-auth/biscuit-wasm@^0.6.0",
+    "@std/assert": "jsr:@std/assert@^1.0.18",
     "playwright": "npm:playwright@1.57.0"
   }
 }

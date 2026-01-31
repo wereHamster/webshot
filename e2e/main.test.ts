@@ -1,4 +1,4 @@
-import { assertEquals, assertExists } from "jsr:@std/assert";
+import { assertEquals, assertExists } from "@std/assert";
 import { biscuit, PrivateKey } from "@biscuit-auth/biscuit-wasm";
 
 const BASE_URL = "http://localhost:3000";

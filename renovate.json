@@ -6,5 +6,5 @@
     ":enableVulnerabilityAlerts",
     "helpers:pinGitHubActionDigests"
   ],
-  "minimumReleaseAge": "9 days"
+  "minimumReleaseAge": "15 days"
 }

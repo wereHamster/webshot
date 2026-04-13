@@ -81,7 +81,7 @@ WORKDIR /usr/src/app
 
 COPY deno.* main.ts ./
 RUN deno cache main.ts
-RUN deno run -A "npm:playwright@1.57.0" install chromium-headless-shell
+RUN deno run -A playwright install chromium-headless-shell
 
 EXPOSE 3000
 ENTRYPOINT ["/usr/bin/tini", "--", "deno", "run", "-A", "main.ts"]

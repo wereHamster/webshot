@@ -45,19 +45,6 @@
           ];
         };
 
-        headlessShell = pkgs.runCommand "chromium-headless-shell" { } ''
-          mkdir -p $out/bin
-          ln -s ${
-            pkgs.playwright-driver.browsers.override {
-              withChromium = false;
-              withFirefox = false;
-              withWebkit = false;
-              withFfmpeg = false;
-              withChromiumHeadlessShell = true;
-            }
-          }/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell $out/bin/chromium
-        '';
-
         webshotPackage = rustPlatform.buildRustPackage {
           pname = "webshot";
           version = "0.1.0";
@@ -65,19 +52,10 @@
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
 
-          nativeBuildInputs = [
-            pkgs.makeWrapper
-          ];
-
           doCheck = false;
-
-          postInstall = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-            wrapProgram $out/bin/webshot \
-              --set FONTCONFIG_FILE "${fontsConf}"
-          '';
         };
 
-        webshotUser = pkgs.runCommand "webshot-user" {} ''
+        webshotUser = pkgs.runCommand "webshot-user" { } ''
           mkdir -p $out/etc
           echo "webshot:x:1000:1000:webshot:/home/webshot:/bin/nologin" > $out/etc/passwd
           echo "webshot:x:1000:" > $out/etc/group
@@ -95,7 +73,7 @@
             pkgs.cacert
           ]
           ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-            headlessShell
+            pkgs.chromium
           ];
 
           fakeRootCommands = ''
@@ -116,7 +94,7 @@
               "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             ]
             ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-              "CHROME=${headlessShell}/bin/chromium"
+              "CHROME=${pkgs.chromium}/bin/chromium"
               "FONTCONFIG_FILE=${fontsConf}"
             ];
           };

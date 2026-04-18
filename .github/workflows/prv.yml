@@ -4,65 +4,64 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
   URNERYS: app.urnerys.dev
   BUILD: "github-run-${{ github.run_id }}-${{ github.run_attempt }}"
   BISCUIT_PRIVATE_KEY: ed25519-private/869fb6eef6b04ee212479b344690549c9e77bde6c3412b5badcd8b65f89d8c70
 
 jobs:
-  lint:
-    name: Lint
-    if: github.event.pull_request.draft == false
+  fmt:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
       - run: nix run github:nicknovitski/nix-develop .#workflow
-      - run: deno install --frozen
+      - run: cargo fmt --check
 
-      - run: deno lint
+  clippy:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - run: nix run github:nicknovitski/nix-develop .#workflow
+      - uses: giraffate/clippy-action@13b9d32482f25d29ead141b79e7e04e7900281e0 # v1.0.1
+        with:
+          reporter: "github-pr-check"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - run: nix run github:nicknovitski/nix-develop .#workflow
+      - run: cargo build --locked --all-features --all-targets
 
   test:
-    name: Test
-    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
 
     steps:
       - run: |
           curl -sf -X POST -H "Content-Type: application/json" -d '{ "id": "'"$BUILD"'", "build": { "origin": { "commit": "${{ github.sha }}" } } }' "https://$URNERYS/api/v1/projects/webshot/builds"
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
       - run: nix run github:nicknovitski/nix-develop .#workflow
-      - run: deno install --frozen
 
-      - run: deno run -A playwright install chromium-headless-shell
-
-      - run: |
-          deno run -A main.ts &
-          echo $! > server.pid
-
-          for i in {1..30}; do
-            if curl -f http://localhost:3000 > /dev/null 2>&1; then
-              echo "Server is ready"
-              break
-            fi
-            echo "Waiting for server... ($i/30)"
-            sleep 2
-          done
-
-          deno test -A e2e/main.test.ts
-
-      - name: Stop server
-        if: always()
-        run: |
-          if [ -f server.pid ]; then
-            kill $(cat server.pid) || true
-            rm server.pid
-          fi
+      - run: cargo test --locked --all-features --all-targets
 
       - run: |
           curl -sf -X POST -H "Content-Type: application/json" -d '{ "check": { "baseline": "production" } }' "https://$URNERYS/api/v1/projects/webshot/builds/$BUILD/checks"

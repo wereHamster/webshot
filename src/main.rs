@@ -1,16 +1,10 @@
 use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, ServerBuilder};
 use std::sync::Arc;
-use webshot::{auth::Auth, browser, ping, v1, ServerContext};
+use webshot::{auth::Auth, browser, init_tracing_subscriber, ping, v1, ServerContext};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                tracing_subscriber::EnvFilter::new("info,chromiumoxide::handler=error")
-            }),
-        )
-        .init();
+    init_tracing_subscriber();
 
     let auth = Auth::from_env()?;
     let browser = browser::launch_browser().await?;

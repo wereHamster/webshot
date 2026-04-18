@@ -19,6 +19,7 @@ schemars = "0.8.22"
 hex = "0.4.3"
 chromiumoxide_cdp = "0.9.1"
 tokio = { version = "1.52.0", features = ["full"] }
+tracing-journald = "0.3.2"
 
 [dev-dependencies]
 reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls"] }

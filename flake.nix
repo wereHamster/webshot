@@ -73,7 +73,6 @@
 
           postInstall = pkgs.lib.optionalString pkgs.stdenv.isLinux ''
             wrapProgram $out/bin/webshot \
-              --set CHROME "${headlessShell}/bin/chromium" \
               --set FONTCONFIG_FILE "${fontsConf}"
           '';
         };

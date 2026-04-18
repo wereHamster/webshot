@@ -15,7 +15,7 @@ url = "2.5.8"
 futures = "0.3.32"
 base64 = "0.22.1"
 http = "1.4.0"
-schemars = "0.8.22"
+schemars = "1.2.1"
 hex = "0.4.3"
 chromiumoxide_cdp = "0.9.1"
 tokio = { version = "1.52.0", features = ["full"] }

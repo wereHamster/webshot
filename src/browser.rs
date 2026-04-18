@@ -11,38 +11,16 @@ use dropshot::HttpError;
 use futures::StreamExt;
 
 pub async fn launch_browser() -> Result<Browser, Box<dyn std::error::Error>> {
-    let mut browser_config = BrowserConfig::builder()
-        .no_sandbox()
-        .disable_default_args()
-        .args(vec![
-            "--disable-dev-shm-usage",
-            "--font-render-hinting=none",
-            "--disable-font-subpixel-positioning",
-            "--disable-gpu-sandbox",
-            "--force-color-profile=srgb",
-            "--disable-background-timer-throttling",
-            "--disable-renderer-backgrounding",
-            "--disable-background-networking",
-            "--disable-backgrounding-occluded-windows",
-            "--disable-breakpad",
-            "--disable-client-side-phishing-detection",
-            "--disable-component-extensions-with-background-pages",
-            "--disable-component-update",
-            "--disable-default-apps",
-            "--disable-extensions",
-            "--disable-hang-monitor",
-            "--disable-ipc-flooding-protection",
-            "--disable-popup-blocking",
-            "--disable-prompt-on-repost",
-            "--disable-sync",
-            "--metrics-recording-only",
-            "--no-first-run",
-            "--password-store=basic",
-            "--use-mock-keychain",
-            "--disable-features=OptimizationHints,Translate,MediaRouter,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,PaintHolding",
-            "--mute-audio",
-            "--hide-scrollbars",
-        ]);
+    // chromiumoxide comes with a set of sensible default arguments. We add a
+    // few more specific ones that are useful for a screenshot service like ours.
+    let mut browser_config = BrowserConfig::builder().args(vec![
+        "hide-scrollbars",
+        "mute-audio",
+        // --
+        // The options below improve font rendering.
+        "font-render-hinting=none",
+        "disable-font-subpixel-positioning",
+    ]);
 
     if let Ok(chrome_path) = std::env::var("CHROME") {
         tracing::info!("Using CHROME executable: {}", chrome_path);

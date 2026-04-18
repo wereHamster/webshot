@@ -77,6 +77,12 @@
               --set FONTCONFIG_FILE "${fontsConf}"
           '';
         };
+
+        webshotUser = pkgs.runCommand "webshot-user" {} ''
+          mkdir -p $out/etc
+          echo "webshot:x:1000:1000:webshot:/home/webshot:/bin/nologin" > $out/etc/passwd
+          echo "webshot:x:1000:" > $out/etc/group
+        '';
       in
       {
         packages.default = webshotPackage;
@@ -85,6 +91,7 @@
           name = "webshot";
 
           contents = [
+            webshotUser
             webshotPackage
             pkgs.cacert
           ]
@@ -92,12 +99,21 @@
             headlessShell
           ];
 
+          fakeRootCommands = ''
+            mkdir -p ./tmp
+            chmod 1777 ./tmp
+            mkdir -p ./home/webshot
+            chown 1000:1000 ./home/webshot
+          '';
+
           config = {
+            User = "1000:1000";
             Cmd = [ "${webshotPackage}/bin/webshot" ];
             ExposedPorts = {
               "3000/tcp" = { };
             };
             Env = [
+              "HOME=/home/webshot"
               "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             ]
             ++ pkgs.lib.optionals pkgs.stdenv.isLinux [

@@ -1,7 +1,10 @@
 use biscuit_auth::{
     macros::rule, AuthorizerBuilder, AuthorizerLimits, Biscuit, KeyPair, PrivateKey, PublicKey,
 };
-use dropshot::{ClientErrorStatusCode, HttpError, RequestContext};
+use dropshot::{
+    ApiEndpointBodyContentType, ClientErrorStatusCode, ExtensionMode, ExtractorMetadata, HttpError,
+    RequestContext, SharedExtractor,
+};
 use http::header;
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,41 +27,65 @@ impl Auth {
     }
 }
 
-pub(crate) fn extract_token(
-    rqctx: &RequestContext<Arc<ServerContext>>,
-) -> Result<Biscuit, HttpError> {
-    let headers = rqctx.request.headers();
-    let auth_header = headers
-        .get(header::AUTHORIZATION)
-        .ok_or_else(|| {
-            HttpError::for_client_error(
+pub struct ValidBiscuit(pub Biscuit);
+
+#[async_trait::async_trait]
+impl SharedExtractor for ValidBiscuit {
+    async fn from_request<Context: dropshot::ServerContext>(
+        rqctx: &RequestContext<Context>,
+    ) -> Result<Self, HttpError> {
+        let ctx_any: &dyn std::any::Any = rqctx.context();
+        let server_context = ctx_any
+            .downcast_ref::<Arc<ServerContext>>()
+            .ok_or_else(|| HttpError::for_internal_error("Invalid server context".to_string()))?;
+
+        let headers = rqctx.request.headers();
+        let auth_header = headers
+            .get(header::AUTHORIZATION)
+            .ok_or_else(|| {
+                HttpError::for_client_error(
+                    None,
+                    ClientErrorStatusCode::UNAUTHORIZED,
+                    "Unauthorized".to_string(),
+                )
+            })?
+            .to_str()
+            .map_err(|_| {
+                HttpError::for_client_error(
+                    None,
+                    ClientErrorStatusCode::BAD_REQUEST,
+                    "Bad Request".to_string(),
+                )
+            })?;
+
+        if !auth_header.starts_with("Bearer ") {
+            return Err(HttpError::for_client_error(
                 None,
                 ClientErrorStatusCode::UNAUTHORIZED,
                 "Unauthorized".to_string(),
-            )
-        })?
-        .to_str()
-        .map_err(|_| {
-            HttpError::for_client_error(
-                None,
-                ClientErrorStatusCode::BAD_REQUEST,
-                "Bad Request".to_string(),
-            )
-        })?;
+            ));
+        }
 
-    if !auth_header.starts_with("Bearer ") {
-        return Err(HttpError::for_client_error(
-            None,
-            ClientErrorStatusCode::UNAUTHORIZED,
-            "Bad Request".to_string(),
-        ));
+        let token_base64 = &auth_header[7..];
+        match Biscuit::from_base64(token_base64, server_context.auth.public_key) {
+            Ok(biscuit) => Ok(ValidBiscuit(biscuit)),
+            Err(e) => {
+                tracing::debug!("Biscuit parse error: {:?}", e);
+                Err(HttpError::for_client_error(
+                    None,
+                    ClientErrorStatusCode::UNAUTHORIZED,
+                    "Unauthorized".to_string(),
+                ))
+            }
+        }
     }
 
-    let token_base64 = &auth_header[7..];
-    Biscuit::from_base64(token_base64, rqctx.context().auth.public_key).map_err(|e| {
-        tracing::error!("Biscuit parse error: {:?}", e);
-        HttpError::for_bad_request(None, "Bad Request".to_string())
-    })
+    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
+        ExtractorMetadata {
+            extension_mode: ExtensionMode::None,
+            parameters: vec![],
+        }
+    }
 }
 
 pub(crate) fn authorize_request(
@@ -66,7 +93,7 @@ pub(crate) fn authorize_request(
     builder: AuthorizerBuilder,
 ) -> Result<String, HttpError> {
     let mut authorizer = builder.build(&biscuit).map_err(|e| {
-        tracing::error!("Biscuit add_token error: {:?}", e);
+        tracing::debug!("Biscuit add_token error: {:?}", e);
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,
@@ -81,7 +108,7 @@ pub(crate) fn authorize_request(
     };
 
     authorizer.authorize_with_limits(limits).map_err(|e| {
-        tracing::error!("Biscuit authorization failed: {:?}", e);
+        tracing::debug!("Biscuit authorization failed: {:?}", e);
         HttpError::for_client_error(
             None,
             ClientErrorStatusCode::UNAUTHORIZED,

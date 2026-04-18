@@ -1,5 +1,5 @@
 use crate::{
-    auth::{authorize_request, extract_token},
+    auth::{authorize_request, ValidBiscuit},
     browser::{configure_page, create_page, take_screenshot},
     ServerContext,
 };
@@ -61,9 +61,9 @@ pub struct CaptureRequest {
 }]
 pub async fn render(
     rqctx: RequestContext<Arc<ServerContext>>,
+    biscuit: ValidBiscuit,
     body: TypedBody<RenderRequest>,
 ) -> Result<Response<Body>, HttpError> {
-    let token = extract_token(&rqctx)?;
     let authorizer = authorizer!(
         r#"
             time({time});
@@ -74,7 +74,7 @@ pub async fn render(
         time = std::time::SystemTime::now()
     );
 
-    let user = authorize_request(token, authorizer)?;
+    let user = authorize_request(biscuit.0, authorizer)?;
     tracing::info!("Render Request from user:{}", user);
 
     let browser = &rqctx.context().browser;
@@ -157,9 +157,9 @@ pub async fn render(
 }]
 pub async fn capture(
     rqctx: RequestContext<Arc<ServerContext>>,
+    biscuit: ValidBiscuit,
     body: TypedBody<CaptureRequest>,
 ) -> Result<Response<Body>, HttpError> {
-    let token = extract_token(&rqctx)?;
     let req = body.into_inner();
     let parsed_url = Url::parse(&req.input)
         .map_err(|_| HttpError::for_bad_request(None, "Invalid URL".to_string()))?;
@@ -177,7 +177,7 @@ pub async fn capture(
         hostname = hostname
     );
 
-    let user = authorize_request(token, authorizer)?;
+    let user = authorize_request(biscuit.0, authorizer)?;
     tracing::info!(
         "Capture Request from user:{} for hostname:{}",
         user,

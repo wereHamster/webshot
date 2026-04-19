@@ -1,13 +1,18 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
     flake-utils.url = "github:numtide/flake-utils";
+
+    nix-develop.url = "github:nicknovitski/nix-develop";
+    nix-develop.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
     {
       nixpkgs,
       flake-utils,
+      nix-develop,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -48,7 +53,10 @@
         '';
       in
       {
-        packages.default = webshotPackage;
+        packages = {
+          nix-develop = nix-develop.packages.${system}.default;
+          default = webshotPackage;
+        };
 
         packages.docker = pkgs.dockerTools.buildLayeredImage {
           name = "webshot";

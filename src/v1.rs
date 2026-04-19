@@ -51,7 +51,7 @@ pub enum Target {
 #[derive(Deserialize, JsonSchema)]
 pub struct CaptureRequest {
     pub device: Device,
-    pub input: String,
+    pub input: Url,
     pub target: Target,
 }
 
@@ -161,9 +161,7 @@ pub async fn capture(
     body: TypedBody<CaptureRequest>,
 ) -> Result<Response<Body>, HttpError> {
     let req = body.into_inner();
-    let parsed_url = Url::parse(&req.input)
-        .map_err(|_| HttpError::for_bad_request(None, "Invalid URL".to_string()))?;
-    let hostname = parsed_url.host_str().unwrap_or("");
+    let hostname = req.input.host_str().unwrap_or("");
 
     let authorizer = authorizer!(
         r#"
@@ -214,7 +212,7 @@ pub async fn capture(
                 HttpError::for_internal_error("Failed to create event listener".to_string())
             })?;
 
-        let res = page.goto(&req.input).await;
+        let res = page.goto(req.input.as_str()).await;
 
         if res.is_ok() {
             let wait_result = timeout(Duration::from_secs(10), async {

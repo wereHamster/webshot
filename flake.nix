@@ -1,34 +1,20 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-
     flake-utils.url = "github:numtide/flake-utils";
-
-    rust-overlay = {
-      url = "github:oxalica/rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
     {
       nixpkgs,
       flake-utils,
-      rust-overlay,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-        rustToolchain = pkgs.rust-bin.stable.latest.default;
-
-        rustPlatform = pkgs.makeRustPlatform {
-          cargo = rustToolchain;
-          rustc = rustToolchain;
+          inherit system;
         };
 
         fontsConf = pkgs.makeFontsConf {
@@ -45,7 +31,7 @@
           ];
         };
 
-        webshotPackage = rustPlatform.buildRustPackage {
+        webshotPackage = pkgs.rustPlatform.buildRustPackage {
           pname = "webshot";
           version = "0.1.0";
 
@@ -102,7 +88,8 @@
 
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [
-            rustToolchain
+            pkgs.rustc
+            pkgs.cargo
             pkgs.google-cloud-sdk
             pkgs.skopeo
           ];
@@ -110,7 +97,8 @@
 
         devShells.workflow = pkgs.mkShell {
           nativeBuildInputs = [
-            rustToolchain
+            pkgs.rustc
+            pkgs.cargo
           ];
         };
       }

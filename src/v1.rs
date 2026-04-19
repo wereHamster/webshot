@@ -161,7 +161,19 @@ pub async fn capture(
     body: TypedBody<CaptureRequest>,
 ) -> Result<Response<Body>, HttpError> {
     let req = body.into_inner();
-    let hostname = req.input.host_str().unwrap_or("");
+
+    let scheme = req.input.scheme();
+    if scheme != "http" && scheme != "https" {
+        return Err(HttpError::for_bad_request(
+            None,
+            "Invalid URL scheme".to_string(),
+        ));
+    }
+
+    let hostname = match req.input.host_str() {
+        Some(h) if !h.is_empty() => h,
+        _ => return Err(HttpError::for_bad_request(None, "Bad URL".to_string())),
+    };
 
     let authorizer = authorizer!(
         r#"

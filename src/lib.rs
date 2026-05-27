@@ -2,8 +2,9 @@ pub mod auth;
 pub mod browser;
 pub mod v1;
 
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use chromiumoxide::Browser;
-use dropshot::{endpoint, HttpError, HttpResponseOk, RequestContext};
 use std::sync::Arc;
 use tracing_subscriber::prelude::*;
 
@@ -34,12 +35,35 @@ pub struct ServerContext {
     pub browser: Browser,
 }
 
-#[endpoint {
-    method = GET,
-    path = "/",
-}]
-pub async fn ping(
-    _rqctx: RequestContext<Arc<ServerContext>>,
-) -> Result<HttpResponseOk<()>, HttpError> {
-    Ok(HttpResponseOk(()))
+#[derive(Debug)]
+pub enum AppError {
+    BadRequest(String),
+    Unauthorized(String),
+    Internal(String),
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, message) = match self {
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
+            AppError::Internal(msg) => {
+                tracing::error!("Internal server error: {}", msg);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal Server Error".to_string(),
+                )
+            }
+        };
+
+        let body = serde_json::json!({
+            "error": message
+        });
+
+        (status, axum::Json(body)).into_response()
+    }
+}
+
+pub async fn ping(_state: axum::extract::State<Arc<ServerContext>>) -> impl IntoResponse {
+    StatusCode::OK
 }

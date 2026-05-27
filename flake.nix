@@ -98,6 +98,7 @@
           nativeBuildInputs = [
             pkgs.rustc
             pkgs.cargo
+            pkgs.rustfmt
             pkgs.google-cloud-sdk
             pkgs.skopeo
           ];

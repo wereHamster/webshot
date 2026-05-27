@@ -1,15 +1,18 @@
 use crate::{
     auth::{authorize_request, ValidBiscuit},
     browser::{configure_page, create_page, take_screenshot},
-    ServerContext,
+    AppError, ServerContext,
+};
+use axum::{
+    extract::State,
+    http::{header, StatusCode},
+    Json,
 };
 use biscuit_auth::macros::authorizer;
 use chromiumoxide::cdp::browser_protocol::page::{
     CaptureScreenshotFormat, EventLifecycleEvent, SetLifecycleEventsEnabledParams,
 };
-use dropshot::{endpoint, Body, HttpError, RequestContext, TypedBody};
 use futures::StreamExt;
-use http::{header, Response, StatusCode};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -55,15 +58,11 @@ pub struct CaptureRequest {
     pub target: Target,
 }
 
-#[endpoint {
-    method = POST,
-    path = "/v1/render",
-}]
 pub async fn render(
-    rqctx: RequestContext<Arc<ServerContext>>,
+    State(state): State<Arc<ServerContext>>,
     biscuit: ValidBiscuit,
-    body: TypedBody<RenderRequest>,
-) -> Result<Response<Body>, HttpError> {
+    Json(req): Json<RenderRequest>,
+) -> Result<impl axum::response::IntoResponse, AppError> {
     let authorizer = authorizer!(
         r#"
             time({time});
@@ -77,13 +76,12 @@ pub async fn render(
     let user = authorize_request(biscuit.0, authorizer)?;
     tracing::info!("Render Request from user:{}", user);
 
-    let browser = &rqctx.context().browser;
+    let browser = &state.browser;
 
     let (context_id, page) = create_page(browser).await?;
 
-    let result: Result<Vec<u8>, HttpError> = async {
-        let body_val = body.into_inner();
-        configure_page(&page, &body_val.device).await?;
+    let result: Result<Vec<u8>, AppError> = async {
+        configure_page(&page, &req.device).await?;
 
         page.execute(
             SetLifecycleEventsEnabledParams::builder()
@@ -91,13 +89,13 @@ pub async fn render(
                 .build()
                 .map_err(|e| {
                     tracing::error!("Failed to build SetLifecycleEventsEnabledParams: {:?}", e);
-                    HttpError::for_internal_error("Failed to enable lifecycle events".to_string())
+                    AppError::Internal("Failed to enable lifecycle events".to_string())
                 })?,
         )
         .await
         .map_err(|e| {
             tracing::error!("Failed to enable lifecycle events: {:?}", e);
-            HttpError::for_internal_error("Failed to enable lifecycle events".to_string())
+            AppError::Internal("Failed to enable lifecycle events".to_string())
         })?;
 
         let mut events = page
@@ -105,12 +103,12 @@ pub async fn render(
             .await
             .map_err(|e| {
                 tracing::error!("Failed to create event listener: {:?}", e);
-                HttpError::for_internal_error("Failed to create event listener".to_string())
+                AppError::Internal("Failed to create event listener".to_string())
             })?;
 
-        page.set_content(body_val.input).await.map_err(|e| {
+        page.set_content(&req.input).await.map_err(|e| {
             tracing::error!("Failed to set content: {:?}", e);
-            HttpError::for_internal_error("Failed to set content".to_string())
+            AppError::Internal("Failed to set content".to_string())
         })?;
 
         let wait_result = timeout(Duration::from_secs(10), async {
@@ -130,7 +128,7 @@ pub async fn render(
             .await
             .map_err(|e| {
                 tracing::error!("Screenshot failed: {:?}", e);
-                HttpError::for_internal_error("Screenshot failed".to_string())
+                AppError::Internal("Screenshot failed".to_string())
             })
     }
     .await;
@@ -144,35 +142,22 @@ pub async fn render(
 
     let img = result?;
 
-    Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "image/png")
-        .body(Body::from(img))
-        .map_err(|_| HttpError::for_internal_error("Response builder failed".to_string()))
+    Ok((StatusCode::OK, [(header::CONTENT_TYPE, "image/png")], img))
 }
 
-#[endpoint {
-    method = POST,
-    path = "/v1/capture",
-}]
 pub async fn capture(
-    rqctx: RequestContext<Arc<ServerContext>>,
+    State(state): State<Arc<ServerContext>>,
     biscuit: ValidBiscuit,
-    body: TypedBody<CaptureRequest>,
-) -> Result<Response<Body>, HttpError> {
-    let req = body.into_inner();
-
+    Json(req): Json<CaptureRequest>,
+) -> Result<impl axum::response::IntoResponse, AppError> {
     let scheme = req.input.scheme();
     if scheme != "http" && scheme != "https" {
-        return Err(HttpError::for_bad_request(
-            None,
-            "Invalid URL scheme".to_string(),
-        ));
+        return Err(AppError::BadRequest("Invalid URL scheme".to_string()));
     }
 
     let hostname = match req.input.host_str() {
         Some(h) if !h.is_empty() => h,
-        _ => return Err(HttpError::for_bad_request(None, "Bad URL".to_string())),
+        _ => return Err(AppError::BadRequest("Bad URL".to_string())),
     };
 
     let authorizer = authorizer!(
@@ -194,11 +179,11 @@ pub async fn capture(
         hostname
     );
 
-    let browser = &rqctx.context().browser;
+    let browser = &state.browser;
 
     let (context_id, page) = create_page(browser).await?;
 
-    let result: Result<Vec<u8>, HttpError> = async {
+    let result: Result<Vec<u8>, AppError> = async {
         configure_page(&page, &req.device).await?;
 
         page.execute(
@@ -207,13 +192,13 @@ pub async fn capture(
                 .build()
                 .map_err(|e| {
                     tracing::error!("Failed to build SetLifecycleEventsEnabledParams: {:?}", e);
-                    HttpError::for_internal_error("Failed to enable lifecycle events".to_string())
+                    AppError::Internal("Failed to enable lifecycle events".to_string())
                 })?,
         )
         .await
         .map_err(|e| {
             tracing::error!("Failed to enable lifecycle events: {:?}", e);
-            HttpError::for_internal_error("Failed to enable lifecycle events".to_string())
+            AppError::Internal("Failed to enable lifecycle events".to_string())
         })?;
 
         let mut events = page
@@ -221,7 +206,7 @@ pub async fn capture(
             .await
             .map_err(|e| {
                 tracing::error!("Failed to create event listener: {:?}", e);
-                HttpError::for_internal_error("Failed to create event listener".to_string())
+                AppError::Internal("Failed to create event listener".to_string())
             })?;
 
         let res = page.goto(req.input.as_str()).await;
@@ -265,7 +250,7 @@ pub async fn capture(
             tracing::info!(fallback_image_base64 = %base64_str, "Fallback debug screenshot");
         }
 
-        Err(HttpError::for_internal_error("Capture failed".to_string()))
+        Err(AppError::Internal("Capture failed".to_string()))
     }
     .await;
 
@@ -278,9 +263,5 @@ pub async fn capture(
 
     let img = result?;
 
-    Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "image/png")
-        .body(Body::from(img))
-        .map_err(|_| HttpError::for_internal_error("Response builder failed".to_string()))
+    Ok((StatusCode::OK, [(header::CONTENT_TYPE, "image/png")], img))
 }

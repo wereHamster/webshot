@@ -1,5 +1,8 @@
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use biscuit_auth::{macros::biscuit, KeyPair};
-use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, ServerBuilder};
 use reqwest::{multipart, Client};
 use serde_json::json;
 use std::env;
@@ -171,34 +174,20 @@ async fn integration_test_suite() {
 
     let context = Arc::new(ServerContext { auth, browser });
 
-    let mut api = ApiDescription::new();
-    api.register(ping).unwrap();
-    api.register(v1::render).unwrap();
-    api.register(v1::capture).unwrap();
+    let app = Router::new()
+        .route("/", get(ping))
+        .route("/v1/render", post(v1::render))
+        .route("/v1/capture", post(v1::capture))
+        .layer(axum::extract::DefaultBodyLimit::max(1024 * 1024))
+        .with_state(context.clone());
 
-    let config = ConfigDropshot {
-        bind_address: "127.0.0.1:0".parse().unwrap(),
-        default_request_body_max_bytes: 1024 * 1024,
-        ..Default::default()
-    };
-
-    let log = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
-    }
-    .to_logger("webshot_test")
-    .unwrap();
-
-    let server = ServerBuilder::new(api, context, log)
-        .config(config)
-        .start()
-        .unwrap();
-
-    let port = server.local_addr().port();
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
     let base_url = format!("http://127.0.0.1:{}", port);
     let token = generate_test_token(&keypair);
 
     let server_task = tokio::spawn(async move {
-        server.await.unwrap();
+        axum::serve(listener, app).await.unwrap();
     });
 
     // Run tests sequentially

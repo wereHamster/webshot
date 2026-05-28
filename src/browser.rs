@@ -1,4 +1,5 @@
 use crate::v1::{Device, Target};
+use crate::AppError;
 use chromiumoxide::{
     cdp::browser_protocol::browser::BrowserContextId,
     cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams,
@@ -7,7 +8,6 @@ use chromiumoxide::{
     cdp::browser_protocol::target::{CreateBrowserContextParams, CreateTargetParams},
     Browser, BrowserConfig, Page,
 };
-use dropshot::HttpError;
 use futures::StreamExt;
 
 pub async fn launch_browser() -> Result<Browser, Box<dyn std::error::Error>> {
@@ -33,13 +33,13 @@ pub async fn launch_browser() -> Result<Browser, Box<dyn std::error::Error>> {
     Ok(browser)
 }
 
-pub(crate) async fn create_page(browser: &Browser) -> Result<(BrowserContextId, Page), HttpError> {
+pub(crate) async fn create_page(browser: &Browser) -> Result<(BrowserContextId, Page), AppError> {
     let context_id = browser
         .create_browser_context(CreateBrowserContextParams::builder().build())
         .await
         .map_err(|e| {
             tracing::error!("Failed to create browser context: {:?}", e);
-            HttpError::for_internal_error("Failed to create browser context".to_string())
+            AppError::Internal("Failed to create browser context".to_string())
         })?;
 
     let target_params = match CreateTargetParams::builder()
@@ -51,9 +51,7 @@ pub(crate) async fn create_page(browser: &Browser) -> Result<(BrowserContextId, 
         Err(e) => {
             tracing::error!("Failed to build CreateTargetParams: {:?}", e);
             let _ = browser.dispose_browser_context(context_id).await;
-            return Err(HttpError::for_internal_error(
-                "Failed to create page".to_string(),
-            ));
+            return Err(AppError::Internal("Failed to create page".to_string()));
         }
     };
 
@@ -62,9 +60,7 @@ pub(crate) async fn create_page(browser: &Browser) -> Result<(BrowserContextId, 
         Err(e) => {
             tracing::error!("Failed to create page: {:?}", e);
             let _ = browser.dispose_browser_context(context_id).await;
-            Err(HttpError::for_internal_error(
-                "Failed to create page".to_string(),
-            ))
+            Err(AppError::Internal("Failed to create page".to_string()))
         }
     }
 }
@@ -118,7 +114,7 @@ pub(crate) async fn take_screenshot(
     }
 }
 
-pub(crate) async fn configure_page(page: &Page, device: &Device) -> Result<(), HttpError> {
+pub(crate) async fn configure_page(page: &Page, device: &Device) -> Result<(), AppError> {
     page.execute(
         SetDeviceMetricsOverrideParams::builder()
             .width(device.viewport.width as i64)
@@ -128,13 +124,13 @@ pub(crate) async fn configure_page(page: &Page, device: &Device) -> Result<(), H
             .build()
             .map_err(|e| {
                 tracing::error!("Failed to build SetDeviceMetricsOverrideParams: {:?}", e);
-                HttpError::for_internal_error("Failed to configure viewport".to_string())
+                AppError::Internal("Failed to configure viewport".to_string())
             })?,
     )
     .await
     .map_err(|e| {
         tracing::error!("Failed to configure viewport: {:?}", e);
-        HttpError::for_internal_error("Failed to configure viewport".to_string())
+        AppError::Internal("Failed to configure viewport".to_string())
     })?;
 
     if let Some(headers) = &device.extra_http_headers {
@@ -145,15 +141,13 @@ pub(crate) async fn configure_page(page: &Page, device: &Device) -> Result<(), H
                 .build()
                 .map_err(|e| {
                     tracing::error!("Failed to build SetExtraHttpHeadersParams: {:?}", e);
-                    HttpError::for_internal_error(
-                        "Failed to configure extra HTTP headers".to_string(),
-                    )
+                    AppError::Internal("Failed to configure extra HTTP headers".to_string())
                 })?,
         )
         .await
         .map_err(|e| {
             tracing::error!("Failed to configure extra HTTP headers: {:?}", e);
-            HttpError::for_internal_error("Failed to configure extra HTTP headers".to_string())
+            AppError::Internal("Failed to configure extra HTTP headers".to_string())
         })?;
     }
 

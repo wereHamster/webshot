@@ -1,4 +1,4 @@
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use biscuit_auth::{
     macros::rule, AuthorizerBuilder, AuthorizerLimits, Biscuit, KeyPair, PrivateKey, PublicKey,
 };
@@ -35,7 +35,6 @@ impl HasAuth for Arc<ServerContext> {
 
 pub struct ValidBiscuit(pub Biscuit);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ValidBiscuit
 where
     S: Send + Sync + HasAuth,

@@ -56,7 +56,13 @@ async fn upload_image(req: UploadImageRequest) {
         req.build
     );
 
-    let res = client.post(&url).multipart(form).send().await.unwrap();
+    let mut request_builder = client.post(&url).multipart(form);
+
+    if let Ok(token) = env::var("URNERYS_TOKEN") {
+        request_builder = request_builder.header("Authorization", format!("Bearer {}", token));
+    }
+
+    let res = request_builder.send().await.unwrap();
 
     if !res.status().is_success() {
         panic!("Failed to upload image: {:?}", res.text().await);

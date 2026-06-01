@@ -53,9 +53,18 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
 
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - run: |
-          curl -sf -X POST -H "Content-Type: application/json" -d '{ "id": "'"$BUILD"'", "build": { "origin": { "commit": "${{ github.sha }}" } } }' "https://$URNERYS/api/v1/projects/webshot/builds"
+          OIDC_TOKEN=$(curl -sf -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$URNERYS" | jq -r '.value')
+          URNERYS_TOKEN=$(curl -sf -X POST -H "Content-Type: application/x-www-form-urlencoded" --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" --data-urlencode "subject_token=$OIDC_TOKEN" --data-urlencode "subject_token_type=urn:ietf:params:oauth:token-type:id_token" "https://$URNERYS/api/v1/token" | jq -r '.access_token')
+          echo "URNERYS_TOKEN=$URNERYS_TOKEN" >> $GITHUB_ENV
+
+      - run: |
+          curl -sf -X POST -H "Authorization: Bearer $URNERYS_TOKEN" -H "Content-Type: application/json" -d '{ "id": "'"$BUILD"'", "build": { "origin": { "commit": "${{ github.sha }}" } } }' "https://$URNERYS/api/v1/projects/webshot/builds"
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
@@ -64,4 +73,4 @@ jobs:
       - run: cargo test --locked --all-features --all-targets
 
       - run: |
-          curl -sf -X POST -H "Content-Type: application/json" -d '{ "check": { "baseline": "production" } }' "https://$URNERYS/api/v1/projects/webshot/builds/$BUILD/checks"
+          curl -sf -X POST -H "Authorization: Bearer $URNERYS_TOKEN" -H "Content-Type: application/json" -d '{ "check": { "baseline": "production" } }' "https://$URNERYS/api/v1/projects/webshot/builds/$BUILD/checks"

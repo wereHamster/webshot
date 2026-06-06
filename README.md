@@ -1,7 +1,9 @@
 <div align="center">
   <h1>WebShot</h1>
   <div>Turn <b>WEB</b>-pages into screen-<b>SHOT</b>-s</div>
-</div>
+</div >
+
+Last updated: 2025-05-22
 
 ---
 

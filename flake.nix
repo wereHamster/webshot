@@ -55,7 +55,7 @@
 
         in
         {
-          nix-develop = nix-develop.packages.${pkgs.system}.default;
+          nix-develop = nix-develop.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
           default = webshotPackage;
 

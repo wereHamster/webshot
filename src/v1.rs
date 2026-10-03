@@ -209,12 +209,39 @@ pub async fn capture(
                 AppError::Internal("Failed to create event listener".to_string())
             })?;
 
+        let main_frame_id = page
+            .mainframe()
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to get main frame: {:?}", e);
+                AppError::Internal("Failed to get main frame".to_string())
+            })?
+            .ok_or_else(|| {
+                tracing::error!("Page has no main frame");
+                AppError::Internal("Failed to get main frame".to_string())
+            })?;
+
         let res = page.goto(req.input.as_str()).await;
 
         if res.is_ok() {
             let wait_result = timeout(Duration::from_secs(10), async {
+                // Only accept networkIdle from the main frame's current document. The
+                // listener may also receive a stale networkIdle from the initial
+                // about:blank document (or from child frames), which would cause us to
+                // take the screenshot before the target page has finished loading.
+                // The about:blank document's init event fires before the listener is
+                // created, so its loader_id is never recorded here.
+                let mut loader_id = None;
                 while let Some(event) = events.next().await {
-                    if event.name == "networkIdle" {
+                    if event.frame_id != main_frame_id {
+                        continue;
+                    }
+
+                    if event.name == "init" {
+                        loader_id = Some(event.loader_id.clone());
+                    } else if event.name == "networkIdle"
+                        && loader_id.as_ref() == Some(&event.loader_id)
+                    {
                         break;
                     }
                 }

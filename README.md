@@ -5,6 +5,8 @@
 
 ---
 
+Last updated: 2025-05-22
+
 WebShot is a service that converts HTML (supplied either via direct input or via URL) into images.
 
 Its API is intentionally constrained to only cover a narrow set of use cases.
